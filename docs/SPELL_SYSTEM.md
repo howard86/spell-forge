@@ -1,6 +1,6 @@
 # Spell System — Technical and Design Contract
 
-**Status:** Proposed MVP contract. Implementation details can change through an ADR.
+**Status:** MVP design contract. Exact implemented semantics, prices, inheritance, and bounds are specified in [ADR 0001](decisions/0001-spell-semantics.md). The proposal sections below preserve the original design context; the ADR resolves their open choices.
 
 ## Objective
 Enable ordered composition of spells with predictable outcomes, bounded execution, and visible trade-offs. This is **not** a general-purpose scripting language or node graph in the MVP.

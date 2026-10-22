@@ -11,7 +11,7 @@ Keep decisions explicit so that changing mechanics does not silently invalidate 
 | D-005 | Spell execution | Bounded deterministic event dispatcher | Accepted design constraint |
 | D-006 | Release | Free public Steam demo before evaluating paid 1.0 | Accepted strategy |
 | D-007 | Licensing | Undecided; no rights granted by default | Pending [#10](https://github.com/howard86/spell-forge/issues/10) |
-| D-008 | Trigger order / effect inheritance | Specify with test examples before implementation | Pending [#9](https://github.com/howard86/spell-forge/issues/9) |
+| D-008 | Trigger order / effect inheritance | [Bounded ordered impacts](decisions/0001-spell-semantics.md); headless rule tests | Implemented locally; integration and balance gates tracked separately |
 
 ## Decision changes
 Document alternatives, consequences, and the tests/docs affected. Revisit D-001 after first local build validation, not based on language preference alone.
