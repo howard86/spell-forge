@@ -23,10 +23,17 @@ The initial plan assumes a solo developer working roughly 15–20 hours per week
 - [Test strategy and validation gates](docs/TESTING.md)
 - [Steam demo release plan](docs/RELEASE.md)
 - [Contribution guidelines](CONTRIBUTING.md)
+- [Milestone register and exit gates](docs/MILESTONES.md)
+- [Decision log](docs/DECISIONS.md)
+- [Getting started](docs/GETTING_STARTED.md)
 
 **Current first priority:** Validate enjoyable combat and ordered spell construction before expanding content. See the [roadmap](docs/ROADMAP.md) for stage-by-stage goals and exit criteria.
 
 The contents of these documents are **planning proposals** rather than evidence that features have already been built.
+
+## Tracking status
+
+Seven stage issues ([#2–#8](https://github.com/howard86/spell-forge/issues)) currently act as milestone trackers. Actual GitHub milestone objects have **not yet been created** because the connected integration lacks milestone administration. Stage 1 source files are present, but runtime/CI verification is still pending.
 
 ## Links
 
