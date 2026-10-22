@@ -1,6 +1,6 @@
 # Milestone Register — Spellforge MVP
 
-**Tracking policy:** This file and the linked stage issues are the canonical milestone register until actual GitHub milestone objects can be created. The connected GitHub interface used for setup did not expose create/list milestone operations. **Do not mistake these for GitHub milestone objects.**
+**Tracking policy:** This file defines acceptance gates; the [GitHub milestone objects](https://github.com/howard86/spell-forge/milestones) track delivery. Milestones were created on 2026-10-23 without due dates. Issue state alone is not acceptance evidence.
 
 | Milestone | Week | Goal | Tracking issue | Release gate |
 | --- | --- | --- | --- | --- |
@@ -21,8 +21,15 @@ The week numbers are relative to a development start date yet to be chosen; no m
 4. Close a milestone issue only after the exit gate is met.
 5. Do not advance scope merely because the calendar period has ended.
 
-## GitHub milestone objects to create when supported
-Create seven milestones named **M1 — Foundation**, **M2 — Combat Prototype**, **M3 — Spell System**, **M4 — Roguelite Loop**, **M5 — Content & Polish**, **M6 — QA & RC**, **M7 — Demo Launch**. Associate the corresponding issue #2–#8 respectively. Assign cross-stage issues #9–#11 where appropriate. Do not guess due dates.
+## GitHub milestones
+
+- [M1 — Foundation](https://github.com/howard86/spell-forge/milestone/1): #2.
+- [M2 — Combat Prototype](https://github.com/howard86/spell-forge/milestone/2): #3.
+- [M3 — Spell System](https://github.com/howard86/spell-forge/milestone/3): #4 and semantics #9.
+- [M4 — Roguelite Loop](https://github.com/howard86/spell-forge/milestone/4): #5.
+- [M5 — Content & Polish](https://github.com/howard86/spell-forge/milestone/5): #6 and licensing #10.
+- [M6 — QA & RC](https://github.com/howard86/spell-forge/milestone/6): #7 and Steamworks #11.
+- [M7 — Demo Launch](https://github.com/howard86/spell-forge/milestone/7): #8.
 
 ## Current reality
 - M1 foundation files were merged by PR #12, and local imports/exports are now checked; **fresh Windows execution remains unverified by this implementation effort**. Live GitHub issue #2 is already closed; its existing state is preserved, and missing acceptance evidence is tracked separately.

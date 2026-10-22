@@ -33,7 +33,7 @@ Design targets and measured acceptance are distinct; a working implementation do
 
 ## Tracking status
 
-Seven stage issues ([#2–#8](https://github.com/howard86/spell-forge/issues)) currently act as milestone trackers. Actual GitHub milestone objects have **not yet been created** because the connected integration lacks milestone administration. The local playable implementation and verification are tracked in [the evidence ledger](docs/IMPLEMENTATION_STATUS.md); external release gates remain open.
+Seven [GitHub milestones](https://github.com/howard86/spell-forge/milestones) track the stage issues #2–#8. Cross-stage design, licensing and Steamworks issues are assigned to their relevant milestones. The local playable implementation and verification are tracked in [the evidence ledger](docs/IMPLEMENTATION_STATUS.md); external release gates remain open.
 
 ## Links
 

@@ -30,4 +30,4 @@ Read [GDD](GAME_DESIGN.md), [milestone register](MILESTONES.md), and [spell cont
 Commit messages follow conventional commitlint, e.g. `✨ feat(spells): add chain component`. Run `bun run check` (or `bun run fix`) before pushing; CI runs the same lint plus typos, gitleaks and actionlint.
 
 ## Current blockers
-Actual GitHub milestone objects were not available through the connected integration at setup time. See [MILESTONES.md](MILESTONES.md) for the authoritative issue-linked substitute.
+The [milestone register](MILESTONES.md) links the live GitHub milestones and their acceptance gates. Human playtesting, owner licensing and Steam approvals remain external dependencies.
