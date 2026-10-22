@@ -34,11 +34,16 @@ func run() -> void:
             child.pressed.emit()
             break
     check(scene.state == "credits", "credits menu opens")
+    var project_license := FileAccess.get_file_as_string("res://assets/LICENSE.txt")
+    check(project_license.begins_with("MIT License") and project_license.contains("Copyright (c) 2026 Spellforge contributors") and project_license.contains('THE SOFTWARE IS PROVIDED "AS IS"'), "packaged project MIT notice is readable and complete")
+    var found_project_license := false
     var found_license := false
     for child in scene.content.get_children():
         if child is TextEdit:
+            found_project_license = not child.editable and not project_license.is_empty() and child.text.contains("PROJECT LICENSE\n" + project_license)
             found_license = not child.editable and child.text.contains(Engine.get_license_text()) and child.text.contains("THIRD-PARTY ATTRIBUTIONS")
     check(found_license, "credits include read-only engine license and attribution")
+    check(found_project_license, "credits display full read-only project license")
     for child in scene.content.get_children():
         if child is Button and child.text == "Back":
             child.pressed.emit()

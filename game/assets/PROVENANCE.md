@@ -21,6 +21,29 @@ warm hostile cues, muted floor contrast, and different silhouettes for each enem
 Enemy bolts are diamonds; player bolts have square cores. Hazard rings include a
 progress arc and central cross so warnings do not rely on hue alone.
 
-This record documents provenance only. It does not select or grant a project
-license; licensing remains the repository owner's decision. Godot engine and
-bundled dependency notices remain subject to the engine distribution's notices.
+## License and redistribution
+
+On 2026-10-23 the repository owner delegated the license choice. The original
+source, documentation, procedural visuals and synthesized audio are released
+under the repository's [MIT License](../../LICENSE), copyright 2026 Spellforge
+contributors. Original media produced by the presentation/audio code is included
+in that grant. Retain the copyright and permission notice when redistributing
+copies or substantial portions of these materials.
+
+The packaged game includes an identical `assets/LICENSE.txt` and displays its
+full text in Credits. CI compares that copy with the repository license; packaged
+Windows controls checks verify that the license is available and displayed.
+
+Godot Engine, bundled fonts and other engine dependencies keep their own licenses.
+Credits obtains the engine license, copyright inventory and dependency license
+texts from the running engine binary, following the [Godot 4.4 attribution
+guidance](https://docs.godotengine.org/en/4.4/about/complying_with_licenses.html).
+No engine or third-party material is relicensed by the project's MIT grant.
+Development-only Bun packages are not included in the game export; their upstream
+licenses remain applicable when those packages are redistributed.
+
+Inventory review found only the listed code-rendered artwork and synthesized
+sound layer, plus the engine-provided default font. No purchased or downloaded
+third-party media, recorded samples, external melodies or custom fonts are in the
+game project. Recheck this inventory before importing future assets. The standard
+license text is published by the [Open Source Initiative](https://opensource.org/license/mit).

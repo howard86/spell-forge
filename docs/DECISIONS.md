@@ -10,7 +10,7 @@ Keep decisions explicit so that changing mechanics does not silently invalidate 
 | D-004 | Editor UX | Ordered-slot component builder; no general node graph | Accepted for MVP |
 | D-005 | Spell execution | Bounded deterministic event dispatcher | Accepted design constraint |
 | D-006 | Release | Free public Steam demo before evaluating paid 1.0 | Accepted strategy |
-| D-007 | Licensing | Undecided; no rights granted by default | Pending [#10](https://github.com/howard86/spell-forge/issues/10) |
+| D-007 | Licensing | MIT for original source, documentation, artwork and audio; dependencies retain their notices | Owner delegated choice on 2026-10-23; implemented in draft PR #18, tracked by [#10](https://github.com/howard86/spell-forge/issues/10) |
 | D-008 | Trigger order / effect inheritance | [Bounded ordered impacts](decisions/0001-spell-semantics.md); headless rule tests | Implemented locally; integration and balance gates tracked separately |
 
 ## Decision changes

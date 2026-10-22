@@ -13,6 +13,8 @@ jobs:
       image: barichello/godot-ci:4.4.1
     steps:
       - uses: actions/checkout@v4
+      - name: Verify packaged project license matches repository license
+        run: cmp LICENSE game/assets/LICENSE.txt
       - name: Import project and check parse errors
         run: godot --headless --path game --editor --quit
       - name: Test spell semantics

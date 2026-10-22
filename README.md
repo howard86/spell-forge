@@ -42,4 +42,4 @@ Seven [GitHub milestones](https://github.com/howard86/spell-forge/milestones) tr
 
 ## License
 
-No license has been selected. All rights reserved unless a license is added explicitly. Do not assume that third-party game assets may be redistributed.
+Original project source code, documentation, procedural artwork, and synthesized audio are licensed under the [MIT License](LICENSE). Godot, its bundled font/libraries, and development dependencies retain their own licenses and notices. See [provenance and attribution](game/assets/PROVENANCE.md).

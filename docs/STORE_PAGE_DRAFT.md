@@ -1,6 +1,6 @@
 # Spellforge Store Copy and Capture Brief
 
-**Internal draft — pending owner approval, licensing review, captured-build verification, and Steam review.** This document prepares material for issues #6 and #11; it does not establish store readiness or authorize publication. Copy describes the implemented demo scope. It is not a promise of additional full-game content. No screenshots or video are attached to this document.
+**Internal draft — pending owner approval, captured-build verification, and Steam review.** This document prepares material for issues #6 and #11; it does not establish store readiness or authorize publication. Copy describes the implemented demo scope. It is not a promise of additional full-game content. No screenshots or video are attached to this document.
 
 ## Short description
 
@@ -54,7 +54,7 @@ These are source checks, not interactive acceptance results. Recheck them agains
 ## Fields requiring owner or release evidence
 
 - Confirm final product/demo display names, developer/publisher attribution, brand rights, and whether this copy belongs on a demo page or a full-game page. A full-game page needs an owner-approved scope beyond this demo copy.
-- Select repository and asset licensing; complete provenance and redistribution review for visuals, audio, fonts, code, and dependencies.
+- Original source, documentation, artwork and audio use the MIT License. Preserve the project and engine/dependency notices; review any new imported assets before publication. See [provenance](../game/assets/PROVENANCE.md).
 - Supply approved capsule/key art and select genuine screenshots/video from the candidate build. Track filenames, rights review, and captured revision; this document supplies no finished media.
 - Confirm supported interface languages, measured Windows system requirements, supported OS versions, and any accessibility/store feature claims after testing.
 - Choose accurate genres/tags, content disclosures, contact/support route, and privacy wording based on the final build and owner decisions.

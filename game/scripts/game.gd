@@ -127,7 +127,8 @@ func show_credits() -> void:
     credits.editable = false
     credits.custom_minimum_size = Vector2(600, 240)
     credits.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-    credits.text = "Spellforge\nOriginal procedural visuals and synthesized music/sound effects created for this project.\nProject source license: undecided; no distribution license is granted here.\n\nGodot Engine\n" + Engine.get_license_text()
+    var project_license := FileAccess.get_file_as_string("res://assets/LICENSE.txt")
+    credits.text = "Spellforge\nOriginal code, documentation, procedural visuals and synthesized music/sound effects: MIT License.\n\nPROJECT LICENSE\n" + project_license + "\n\nGodot Engine\n" + Engine.get_license_text()
     credits.text += "\n\nTHIRD-PARTY ATTRIBUTIONS\n"
     for entry in Engine.get_copyright_info():
         credits.text += str(entry.get("name", "")) + "\n"
