@@ -14,7 +14,19 @@ Compose a spell, fight through compact randomized encounters, earn new component
 
 The initial plan assumes a solo developer working roughly 15–20 hours per week, with a **16-week target for a public free demo**. This is a planning estimate, not a confirmed release date. Proposed engine: Godot 4, with GDScript for gameplay.
 
-Detailed design, technical decisions, roadmap, and shipping checklist will be added through a documentation pull request.
+## Project documentation
+
+- [Game design and MVP scope](docs/GAME_DESIGN.md)
+- [Spell components and execution rules](docs/SPELL_SYSTEM.md)
+- [Seven-stage development roadmap](docs/ROADMAP.md)
+- [Technical architecture](docs/ARCHITECTURE.md)
+- [Test strategy and validation gates](docs/TESTING.md)
+- [Steam demo release plan](docs/RELEASE.md)
+- [Contribution guidelines](CONTRIBUTING.md)
+
+**Current first priority:** Validate enjoyable combat and ordered spell construction before expanding content. See the [roadmap](docs/ROADMAP.md) for stage-by-stage goals and exit criteria.
+
+The contents of these documents are **planning proposals** rather than evidence that features have already been built.
 
 ## Links
 
