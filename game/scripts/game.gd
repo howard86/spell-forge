@@ -159,6 +159,8 @@ func start_run(seed_value: int) -> void:
 
 func start_encounter() -> void:
     state = "combat"
+    message = ""
+    message_time = 0.0
     panel.hide()
     enemies.clear()
     projectiles.clear()

@@ -31,7 +31,7 @@ Append one row per actual check. `Not run` is intentional until an observer reco
 | Check | Revision / artifact | Environment / seed | Procedure / command | Observed result | Evidence location |
 | --- | --- | --- | --- | --- | --- |
 | Source/contract review | Local working tree from baseline above | Independent read-only reviewer | Source/ADR/test review and fix rounds | Burn damage/death ordering, seeded composition, audio cues and Chain feedback corrected | ADR 0001; regression tests |
-| Automated tests | `build/source-sha256.json` | Godot 4.4.1, macOS Apple M4 Pro | `test_spells.gd`, `test_run.gd`, `test_controls.gd` | 94 spell + 61 run + 25 input/credits checks pass | `build/spells.log`, `build/run.log`, `build/controls.log` |
+| Automated tests | `build/source-sha256.json` | Godot 4.4.1, macOS Apple M4 Pro | `test_spells.gd`, `test_run.gd`, `test_controls.gd` | 94 spell + 62 run + 25 input/credits checks pass | `build/spells.log`, `build/run.log`, `build/controls.log` |
 | Headless import | Same source snapshot | Godot 4.4.1 | `godot --headless --path game --editor --quit` | Passed | `build/import.log` |
 | Rendered screens / synthetic controls | Local working tree | Seed 4242; 1280×720 window | Scene rendering and synthetic mouse/keyboard events | Menu, combat and editor rendered; controls/death/retry pass. Human playtest not run | `build/screenshots/`; `test_controls.gd` |
 | Worst-trigger spell stress | Same source snapshot | Godot 4.4.1 | `test_stress.gd` | 10,000 casts, 800,000 contact attempts; limits respected. This is not target-hardware frame-time measurement | `build/stress.log` |

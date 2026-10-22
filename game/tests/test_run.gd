@@ -68,7 +68,12 @@ func run() -> void:
             var previous: int = game.owned.size()
             game.choose_reward(game.offers[0])
             check(game.owned.size() == previous, "only one reward")
+            if index == 0:
+                game.message = "Mana recovering… simplify your spell between trials."
+                game.message_time = 1.0
             game.apply_reward()
+            if index == 0:
+                check(game.message.is_empty() and game.message_time == 0, "new encounter clears prior combat warnings")
     check(game.state == "victory", "boss victory summary")
     game.start_run(777)
     game.compiled = game.Spell.compile(["projectile", "split", "pierce", "bounce"])
