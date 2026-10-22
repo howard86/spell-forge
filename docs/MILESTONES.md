@@ -32,5 +32,5 @@ The week numbers are relative to a development start date yet to be chosen; no m
 - [M7 — Demo Launch](https://github.com/howard86/spell-forge/milestone/7): #8.
 
 ## Current reality
-- M1 foundation files were merged by PR #12, and local imports/exports are now checked; **fresh Windows execution remains unverified by this implementation effort**. Live GitHub issue #2 is already closed; its existing state is preserved, and missing acceptance evidence is tracked separately.
+- M1 foundation files were merged by PR #12, and local imports/exports are now checked; packaged headless Windows execution was verified at `bf00ea7` (see the evidence ledger). Graphical Windows acceptance remains external, and each new candidate requires its own automated validation. Live GitHub issue #2 is already closed; its existing state is preserved, and missing acceptance evidence is tracked separately.
 - Local M2–M5 gameplay implementation and automated checks are tracked in [the evidence ledger](IMPLEMENTATION_STATUS.md). External playtesting, pacing, fresh Windows acceptance, and Steam gates remain open; no stage issue is closed on code presence alone.

@@ -25,6 +25,6 @@ mkdir -p build
 godot --headless --path game --export-debug "Windows Desktop" ../build/Spellforge.exe
 ```
 
-The executable embeds its game data. Test it on Windows separately: exporting on macOS or Linux does not establish Windows runtime acceptance. CI runs the rules and integration suites before exporting. CI execution remains unverified until a workflow run completes.
+The executable embeds its game data. Test it on Windows separately: exporting on macOS or Linux does not establish Windows runtime acceptance. CI runs the rules and integration suites before exporting. See the evidence ledger for completed workflow runs and their tested revisions.
 
-Original procedural visuals/audio are documented in [asset provenance](assets/PROVENANCE.md). Repository licensing remains undecided. See [implementation evidence](../docs/IMPLEMENTATION_STATUS.md) for release limitations.
+Original procedural visuals/audio are documented in [asset provenance](assets/PROVENANCE.md). The project is MIT licensed; see [LICENSE](../LICENSE) and the in-game credits for engine and third-party notices. See [implementation evidence](../docs/IMPLEMENTATION_STATUS.md) for release limitations.
