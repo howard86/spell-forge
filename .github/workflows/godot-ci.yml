@@ -39,3 +39,45 @@ jobs:
           name: spellforge-windows-debug
           path: build/Spellforge.exe
           if-no-files-found: error
+
+  windows-artifact-smoke:
+    needs: validate-and-export
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the exported game
+        uses: actions/download-artifact@v4
+        with:
+          name: spellforge-windows-debug
+          path: build
+      - name: Exercise the packaged game on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $game = Join-Path $env:GITHUB_WORKSPACE 'build/Spellforge.exe'
+          foreach ($suite in @('spells', 'run', 'controls')) {
+            $script = Join-Path $env:GITHUB_WORKSPACE "game/tests/test_$suite.gd"
+            $log = Join-Path $env:RUNNER_TEMP "spellforge-$suite.log"
+            $process = Start-Process -FilePath $game -ArgumentList @(
+              '--headless', '--script', $script, '--log-file', $log
+            ) -NoNewWindow -PassThru -Wait
+            if ($process.ExitCode -ne 0) {
+              throw "$suite exited with code $($process.ExitCode)"
+            }
+            $output = Get-Content $log -Raw
+            Write-Output $output
+            if ($output -match 'SCRIPT ERROR:|ERROR:|ObjectDB instances leaked') {
+              throw "$suite reported a runtime error"
+            }
+            if ($output -notmatch '\d+ checks, 0 failures') {
+              throw "$suite did not report successful assertions"
+            }
+          }
+      - name: Upload Windows runtime logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spellforge-windows-runtime-logs
+          path: ${{ runner.temp }}/spellforge-*.log
+          if-no-files-found: warn
