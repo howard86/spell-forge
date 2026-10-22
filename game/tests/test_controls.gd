@@ -27,8 +27,9 @@ func run() -> void:
         check(InputMap.has_action(action) and not InputMap.action_get_events(action).is_empty(), "configured InputMap action: " + action)
     root.size = Vector2i(960, 540)
     var scene = load("res://scenes/main.tscn").instantiate()
+    scene.settings_path = "user://controls-test-%d.cfg" % Time.get_ticks_usec()
     root.add_child(scene)
-    scene.settings_path = "user://controls-test-unused.cfg"
+    check(scene.settings.master == 0.7, "isolated settings loaded before scene readiness")
     for child in scene.content.get_children():
         if child is Button and child.text == "Credits":
             child.pressed.emit()

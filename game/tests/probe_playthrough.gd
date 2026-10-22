@@ -11,6 +11,7 @@ func _initialize():
 func run():
     for seed_value in ([4242] if capture_mode else [4242, 12345, 1]):
         game = load("res://scenes/main.tscn").instantiate()
+        game.settings_path = "user://capture-test-%d.cfg" % Time.get_ticks_usec()
         root.add_child(game)
         game.set_physics_process(false)
         await hold_capture_frames(120)
