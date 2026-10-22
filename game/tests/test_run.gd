@@ -152,6 +152,94 @@ func run() -> void:
     game.add_effect("explode", Vector2.ZERO, Vector2.ZERO, 72)
     game.start_run(99)
     check(game.effects.is_empty(), "restart clears cosmetic effects")
+    # Review regressions: collision chronology, impact geometry and death boundaries.
+    for reverse_order in [false, true]:
+        game.start_run(42)
+        game.enemies.clear()
+        for x in ([224, 220] if reverse_order else [220, 224]):
+            game.spawn_enemy("pursuer", Vector2(x, 200), 100)
+        game.player_pos = Vector2(182, 200)
+        game.aim = Vector2.RIGHT
+        game.cast_spell()
+        game.update_projectiles(1.0 / 60)
+        for enemy in game.enemies:
+            check(enemy.hp == (24.0 if enemy.position.x == 220 else 42.0), "nearest swept target wins regardless of insertion order")
+    check(is_equal_approx(game.segment_contact(Vector2(10, 0), 2, Vector2.ZERO, Vector2(20, 0)), 0.4), "swept contact uses circle entry rather than center projection")
+    game.start_run(1)
+    game.enemies.clear()
+    game.spawn_enemy("bulwark", Vector2(550, 300), 100)
+    game.spawn_enemy("pursuer", Vector2(380, 300), 100)
+    game.compiled = game.Spell.compile(["projectile", "chain", "split", "explode"])
+    game.aim = Vector2.RIGHT
+    game.cast_spell()
+    var impact_start: Vector2 = game.projectiles[0].position
+    var expected_contact: Vector2 = impact_start.lerp(impact_start + Vector2(78, 0), game.segment_contact(Vector2(550, 300), game.enemies[0].radius + 5, impact_start, impact_start + Vector2(78, 0)))
+    game.update_projectiles(0.2)
+    check(game.enemies[1].hp < 42, "chain radius begins at actual swept impact")
+    check(game.projectiles.size() == 2 and game.projectiles[0].position.is_equal_approx(expected_contact), "split children originate at actual impact")
+    check(game.effects.back().kind == "explode" and game.effects.back().origin.is_equal_approx(expected_contact), "explosion originates at actual impact")
+    game.start_run(1)
+    game.enemies.clear()
+    game.spawn_enemy("bulwark", Vector2(905, 300), 100)
+    game.enemies[0].aim = Vector2.LEFT
+    var armored_hp: float = game.enemies[0].hp
+    game.compiled = game.Spell.compile(["projectile", "bounce", "split"])
+    game.aim = Vector2.RIGHT
+    game.cast_spell()
+    game.projectiles[0].position = Vector2(900, 300)
+    game.update_projectiles(0.1)
+    check(is_equal_approx(armored_hp - game.enemies[0].hp, 9.9), "incoming wall contact retains directional armor")
+    check(game.projectiles.size() == 2 and game.projectiles[0].direction.x > 0, "split retains incoming direction before wall reflection")
+    game.start_run(1)
+    game.compiled = game.Spell.compile(["projectile", "split"])
+    game.cast_spell()
+    var capped_bolt: Dictionary = game.projectiles[0]
+    for i in 158:
+        game.add_projectile(Vector2(50, 100), Vector2.LEFT, true)
+    game.resolve_projectile_hit(capped_bolt, game.enemies[0])
+    check(game.projectiles.size() == 159 and game.projectiles.filter(func(p): return p.generation == 1).is_empty(), "global cap rejects whole split pair")
+    check(game.casts[capped_bolt.cast_id].split_used and game.casts[capped_bolt.cast_id].projectiles_spawned == 3, "rejected world split retains consumed reservation")
+    game.start_run(1)
+    game.enemies.clear()
+    game.spawn_enemy("pursuer", Vector2(510, 296), 100)
+    game.aim = Vector2.RIGHT
+    game.cast_spell()
+    game.projectiles[0].life = 0.01
+    game.update_projectiles(1.0 / 60)
+    check(game.enemies[0].hp == 24 and game.projectiles.is_empty(), "final partial lifetime resolves contact before expiry")
+    for direction in [Vector2.RIGHT, Vector2.DOWN]:
+        game.start_run(1)
+        game.enemies.clear()
+        game.compiled = game.Spell.compile(["projectile", "bounce"])
+        game.aim = direction
+        game.cast_spell()
+        var wall_bolt: Dictionary = game.projectiles[0]
+        wall_bolt.position = Vector2(921.5, 300) if direction == Vector2.RIGHT else Vector2(500, 497.5)
+        game.update_projectiles(1.0 / 60)
+        check(wall_bolt.direction == -direction and wall_bolt.bounces == 2, "exact boundary reflects immediately once")
+        game.update_projectiles(1.0 / 60)
+        check(wall_bolt.direction == -direction and wall_bolt.bounces == 2, "next tick travels inward without extra bounce")
+    for death_source in ["contact", "projectile"]:
+        game.start_run(42)
+        game.enemies.clear()
+        game.player_pos = Vector2(400, 300)
+        if death_source == "contact":
+            game.spawn_enemy("pursuer", game.player_pos, 100)
+        else:
+            game.add_projectile(game.player_pos, Vector2.RIGHT, true)
+        game.spawn_enemy("swarm", Vector2(470, 300), 100)
+        game.aim = Vector2.RIGHT
+        game.cast_spell()
+        game.projectiles.back().position = Vector2(450, 300)
+        game.hp = 1
+        game.hurt_time = 0
+        game.simulate(1.0 / 60)
+        check(game.state == "death" and game.kills == 0, "death stops later projectile damage: " + death_source)
+        var summary_found := false
+        for child in game.content.get_children():
+            if child is Label and child.text.contains("0 defeated"):
+                summary_found = true
+        check(summary_found, "death summary matches final kill count")
     var original: Dictionary = game.settings.duplicate()
     game.settings.master = 0.25
     game.settings.reduced_flash = true

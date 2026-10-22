@@ -234,8 +234,14 @@ func simulate(delta: float) -> void:
     if Input.is_action_pressed("cast"):
         cast_spell()
     update_enemies(delta)
+    if state != "combat":
+        return
     update_projectiles(delta)
+    if state != "combat":
+        return
     update_hazards(delta)
+    if state != "combat":
+        return
     update_effects(delta)
     enemies = enemies.filter(func(e): return e.hp > 0)
     if state == "combat" and enemies.is_empty():
@@ -266,6 +272,8 @@ func add_projectile(pos: Vector2, direction: Vector2, hostile: bool, owner: int 
 
 func update_enemies(delta: float) -> void:
     for enemy in enemies:
+        if state != "combat":
+            return
         if enemy.hp <= 0:
             continue
         if not enemy.burn.is_empty():
@@ -313,36 +321,60 @@ func enemy_attack(enemy: Dictionary) -> void:
 func update_projectiles(delta: float) -> void:
     var current: Array = projectiles.duplicate()
     for projectile in current:
-        projectile.life -= delta
-        if projectile.life <= 0:
+        if state != "combat":
+            return
+        var travel_time := minf(delta, maxf(0.0, projectile.life))
+        if travel_time <= 0:
             continue
         var previous: Vector2 = projectile.position
-        projectile.position += projectile.direction * projectile.speed * delta
-        if not ARENA.has_point(projectile.position):
-            if projectile.bounces > 0:
-                if projectile.position.x < ARENA.position.x or projectile.position.x > ARENA.end.x:
-                    projectile.direction.x *= -1
-                if projectile.position.y < ARENA.position.y or projectile.position.y > ARENA.end.y:
-                    projectile.direction.y *= -1
-                projectile.position = projectile.position.clamp(ARENA.position, ARENA.end)
-                projectile.bounces -= 1
-            else:
-                projectile.life = 0
+        var destination: Vector2 = previous + projectile.direction * projectile.speed * travel_time
+        # Clip to the first wall; contacts on the incoming segment precede reflection.
+        var wall_fraction := 1.0
+        var movement: Vector2 = destination - previous
+        for axis in 2:
+            if movement[axis] > 0 and destination[axis] >= ARENA.end[axis]:
+                wall_fraction = minf(wall_fraction, (ARENA.end[axis] - previous[axis]) / movement[axis])
+            elif movement[axis] < 0 and destination[axis] <= ARENA.position[axis]:
+                wall_fraction = minf(wall_fraction, (ARENA.position[axis] - previous[axis]) / movement[axis])
+        destination = previous.lerp(destination, clampf(wall_fraction, 0.0, 1.0))
+        var consumed := false
         if projectile.enemy:
-            if segment_distance(player_pos, previous, projectile.position) < 15:
+            var contact := segment_contact(player_pos, 15.0, previous, destination)
+            if contact != INF:
+                projectile.position = previous.lerp(destination, contact)
                 damage_player(12.0)
-                projectile.life = 0
+                consumed = true
         else:
+            var contacts: Array = []
             for enemy in enemies:
                 if enemy.hp <= 0 or projectile.hit_ids.has(enemy.id):
                     continue
-                if segment_distance(enemy.position, previous, projectile.position) > enemy.radius + projectile.radius:
+                var contact := segment_contact(enemy.position, enemy.radius + projectile.radius, previous, destination)
+                if contact != INF:
+                    contacts.append({"enemy": enemy, "time": contact})
+            contacts.sort_custom(func(a, b): return a.time < b.time if a.time != b.time else a.enemy.id < b.enemy.id)
+            for contact in contacts:
+                if contact.enemy.hp <= 0:
                     continue
-                resolve_projectile_hit(projectile, enemy)
+                projectile.position = previous.lerp(destination, contact.time)
+                resolve_projectile_hit(projectile, contact.enemy)
                 if projectile.pierce <= 0:
-                    projectile.life = 0
+                    consumed = true
                     break
                 projectile.pierce -= 1
+        if not consumed:
+            projectile.position = destination
+            var hit_x: bool = (destination.x >= ARENA.end.x and projectile.direction.x > 0) or (destination.x <= ARENA.position.x and projectile.direction.x < 0)
+            var hit_y: bool = (destination.y >= ARENA.end.y and projectile.direction.y > 0) or (destination.y <= ARENA.position.y and projectile.direction.y < 0)
+            if hit_x or hit_y:
+                if Spell.consume_bounce(projectile):
+                    if hit_x:
+                        projectile.direction.x *= -1
+                    if hit_y:
+                        projectile.direction.y *= -1
+                else:
+                    consumed = true
+        projectile.life = 0.0 if consumed else maxf(0.0, projectile.life - delta)
     projectiles = projectiles.filter(func(p): return p.life > 0)
     var live: Dictionary = {}
     for projectile in projectiles:
@@ -352,8 +384,22 @@ func update_projectiles(delta: float) -> void:
         if not live.has(id):
             casts.erase(id)
 
-func segment_distance(point: Vector2, start: Vector2, finish: Vector2) -> float:
-    return point.distance_to(Geometry2D.get_closest_point_to_segment(point, start, finish))
+# First swept circle contact as a fraction of the segment, including initial overlap.
+func segment_contact(point: Vector2, radius: float, start: Vector2, finish: Vector2) -> float:
+    var offset := start - point
+    var c := offset.length_squared() - radius * radius
+    if c <= 0:
+        return 0.0
+    var movement := finish - start
+    var a := movement.length_squared()
+    if a <= 0:
+        return INF
+    var b := offset.dot(movement)
+    var discriminant := b * b - a * c
+    if discriminant < 0:
+        return INF
+    var contact := (-b - sqrt(discriminant)) / a
+    return contact if contact >= 0 and contact <= 1 else INF
 
 func resolve_projectile_hit(projectile: Dictionary, enemy: Dictionary) -> void:
     var targets: Array = []
@@ -365,6 +411,10 @@ func resolve_projectile_hit(projectile: Dictionary, enemy: Dictionary) -> void:
     var events: Array = Spell.resolve_hit(casts[projectile.cast_id], projectile, enemy.id, targets)
     if not projectile.hit_ids.has(enemy.id):
         projectile.hit_ids.append(enemy.id)
+    # World capacity rejects the entire reserved Split pair; never emit half a pair.
+    # Resolver budgets remain consumed, so rejection cannot retry or bypass limits.
+    var split_count := events.filter(func(event): return event.type == "split").size()
+    var allow_split := projectiles.size() + split_count <= MAX_PROJECTILES
     var chain_origin: Vector2 = projectile.position
     for event in events:
         match event.type:
@@ -383,7 +433,8 @@ func resolve_projectile_hit(projectile: Dictionary, enemy: Dictionary) -> void:
                         if event.get("burn", false):
                             target.burn = Spell.refresh_burn(target.burn, Spell.BURN_DPS, elapsed)
             "split":
-                add_projectile(event.position, event.direction, false, projectile.cast_id, 1)
+                if allow_split:
+                    add_projectile(event.position, event.direction, false, projectile.cast_id, 1)
             "explode":
                 add_effect("explode", event.position, event.position, float(event.radius))
                 for target in enemies:
@@ -413,6 +464,8 @@ func hurt_enemy(enemy: Dictionary, amount: float, sound: bool = true) -> void:
 
 func update_hazards(delta: float) -> void:
     for hazard in hazards:
+        if state != "combat":
+            return
         hazard.progress += delta / hazard.life
         if hazard.progress >= 1 and player_pos.distance_to(hazard.position) < hazard.radius + 11:
             damage_player(22.0)

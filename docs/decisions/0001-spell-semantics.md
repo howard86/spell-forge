@@ -33,3 +33,5 @@ Recursive child triggers, duplicate modifiers, and every-pierce-contact explosio
 ## Consequences and verification
 
 Headless tests exercise twelve valid builds, invalid schemas, exact pricing, modifier snapshots, repeated contacts, child inheritance, deterministic chain tie-breaking and range, per-cast hop limits, atomic split reservations, both budget-sensitive orders, depth and event/projectile caps, bounce exhaustion, and burn refresh/expiry. These establish rule correctness, not live collision or game-balance acceptance. Run with `godot --headless --path game --script res://tests/test_spells.gd`.
+
+World integration rejects both Split children if the global projectile cap cannot fit the full pair. The resolver reservation stays consumed; rejection cannot retry the trigger or bypass cast budgets. Swept contacts resolve in first-contact order, with stable target IDs breaking ties, and effects use the incoming direction and actual contact position.
