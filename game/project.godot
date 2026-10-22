@@ -1,15 +1,15 @@
-; Godot 4 project — Stage 1 placeholder prototype
+; Godot 4 project — Spellforge playable demo
 config_version=5
 
 [application]
 config/name="Spellforge"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
-config/description="Pre-production Spellforge foundation; gameplay is not yet implemented."
+config/description="Compose arcane spells and challenge the Runebound Warden."
 
 [display]
-window/size/viewport_width=640
-window/size/viewport_height=360
+window/size/viewport_width=960
+window/size/viewport_height=540
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
