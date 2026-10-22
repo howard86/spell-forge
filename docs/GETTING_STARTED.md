@@ -15,7 +15,7 @@ godot --headless --path game --editor --quit
 godot --path game
 ```
 
-Move the placeholder character with WASD/arrow keys. Spell casting and enemies are **not yet implemented**.
+Move with WASD/arrow keys, aim with the mouse, hold left click to cast, press Space to dodge, and Esc to pause. Clear six encounters, craft between fights, and challenge the boss. Enter a seed on the menu for repeatable encounters and rewards. See [game instructions](../game/README.md) for regression commands.
 
 ## Build smoke test
 ```sh

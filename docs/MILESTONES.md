@@ -25,5 +25,5 @@ The week numbers are relative to a development start date yet to be chosen; no m
 Create seven milestones named **M1 — Foundation**, **M2 — Combat Prototype**, **M3 — Spell System**, **M4 — Roguelite Loop**, **M5 — Content & Polish**, **M6 — QA & RC**, **M7 — Demo Launch**. Associate the corresponding issue #2–#8 respectively. Assign cross-stage issues #9–#11 where appropriate. Do not guess due dates.
 
 ## Current reality
-- M1 foundation files were merged by PR #12, but **the build has not been independently validated**; issue #2 remains open.
-- M2–M7 have not been implemented.
+- M1 foundation files were merged by PR #12, and local imports/exports are now checked; **fresh Windows execution remains unverified by this implementation effort**. Live GitHub issue #2 is already closed; its existing state is preserved, and missing acceptance evidence is tracked separately.
+- Local M2–M5 gameplay implementation and automated checks are tracked in [the evidence ledger](IMPLEMENTATION_STATUS.md). External playtesting, pacing, fresh Windows acceptance, and Steam gates remain open; no stage issue is closed on code presence alone.

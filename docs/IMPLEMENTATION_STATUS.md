@@ -1,0 +1,59 @@
+# Implementation and Release Evidence Ledger
+
+This ledger tracks issue acceptance, not development effort. **No runtime, playtest, platform, or release gate is verified by the presence of this document.** The isolated local implementation is assembled; local verification below does not close external release gates. The foundation baseline was `2a5710117eba92e8838c393d51ca8ad5dabf7873`.
+
+## Evidence rules
+
+- Record revision, command or procedure, environment, observed result, and artifact/log location for each claim.
+- Keep source inspection, automated tests, local gameplay, downloaded Windows checks, blind playtests, and platform approvals distinct.
+- Use `pending`, `verified`, `failed`, or `external dependency` for individual gates. Mark an issue complete only after every applicable acceptance criterion has evidence; a local implementation does not close an external gate.
+- Test duration, ten viable builds, player comprehension, replay motivation, and commercial interest are measured outcomes, not features that can be declared implemented.
+
+## Issue-by-issue gates
+
+| Issue / scope | Locally deliverable work | Required completion evidence | Current gate / evidence |
+| --- | --- | --- | --- |
+| [#2 Foundation](https://github.com/howard86/spell-forge/issues/2) | Godot project, inputs, camera, architecture, CI and Windows export configuration. | Final revision imports/tests successfully; CI artifact exists; downloaded export runs on a fresh Windows machine. | Local Godot import and exports verified; remote CI and fresh Windows machine pending. |
+| [#3 Combat prototype](https://github.com/howard86/spell-forge/issues/3) | Movement, aim, casting, dodge, damage, two enemies, death and restart. | Recorded 3–5-minute sandbox demonstrates all controls, enemy telegraphs, damage, death and restart without a blocker. | Mechanics and synthetic input tests pass; human 3–5-minute combat acceptance pending. |
+| [#4 Spell engine](https://github.com/howard86/spell-forge/issues/4) | All eight components, ordered editor, pricing, bounded resolver, deterministic tests. | Tests exercise documented semantics and limits; at least ten distinct viable builds have observed tactical results. | 94 rule checks pass across 12 legal builds; editor and integration checked. B01–B10 external viability sheets pending. |
+| [#5 Full run](https://github.com/howard86/spell-forge/issues/5) | Six encounters, boss, rewards, seeded run, result screen, restart. | Start-to-victory and start-to-death journeys; seed/log evidence; measured run duration and replay observations. | Scripted six-encounter/boss victory, death and restart pass. Human full-run pacing/replay evidence pending. |
+| [#6 Content and polish](https://github.com/howard86/spell-forge/issues/6) | Five enemy archetypes, biome, visuals/audio, balance, onboarding, settings and accurate store-material drafts. | Readability/settings checks; asset provenance; 10–15 blind testers with comprehension/replay counts and resolved major usability defects. | Original pixel rendering/audio, settings and credits implemented; rendered screens inspected. Perceived audio, balance and blind tests pending. |
+| [#7 Release candidate](https://github.com/howard86/spell-forge/issues/7) | Regression/stress suite, frozen candidate, packaging, known-defect list. | Exact candidate passes regression and target-hardware stress checks; no open P0/P1; fresh Windows validation; required platform reviews approved. | Local regression and bounded stress pass; build source hashes recorded. Target-hardware frame-time, Windows and platform approval pending. |
+| [#8 Public demo](https://github.com/howard86/spell-forge/issues/8) | Launch checklist, support/triage plan and post-launch decision-report template. | Approved demo publicly available and installable; launch monitoring and actual player evidence support a dated continue/pivot/stop report. | External dependency: no public-release or post-launch evidence recorded. |
+| [#9 Spell semantics](https://github.com/howard86/spell-forge/issues/9) | Explicit order, inheritance, trigger, deduplication, burn, budget and deterministic tie-break rules with examples. | Documentation matches final implementation; tests cover each rule, order-sensitive examples, and safe exhaustion. | Locally verified: ADR 0001, independent source review and 94 spell assertions; integrated burn/Chain regressions pass. |
+| [#10 Licensing](https://github.com/howard86/spell-forge/issues/10) | Inventory code/assets, origins, authors, licenses and redistribution evidence; document generated assets and dependencies. | Owner chooses repository license; authorized license text and asset rights review are complete. | Original asset inventory and engine credits included. Owner repository-license choice and final redistribution review remain open. |
+| [#11 Steamworks / Coming Soon](https://github.com/howard86/spell-forge/issues/11) | Prepare truthful copy, legitimate gameplay captures and demo-association checklist. | Owner completes partner onboarding, fee/tax/bank requirements; current rules checked in Steamworks; store/demo association and required reviews confirmed. | External dependency: no account, payment, legal, store or approval evidence available; no release date committed. |
+
+## Validation record
+
+Append one row per actual check. `Not run` is intentional until an observer records a result. Failed checks remain visible with links to their later retest.
+
+| Check | Revision / artifact | Environment / seed | Procedure / command | Observed result | Evidence location |
+| --- | --- | --- | --- | --- | --- |
+| Source/contract review | Local working tree from baseline above | Independent read-only reviewer | Source/ADR/test review and fix rounds | Burn damage/death ordering, seeded composition, audio cues and Chain feedback corrected | ADR 0001; regression tests |
+| Automated tests | `build/source-sha256.json` | Godot 4.4.1, macOS Apple M4 Pro | `test_spells.gd`, `test_run.gd`, `test_controls.gd` | 94 spell + 61 run + 13 input/credits checks pass | `build/spells.log`, `build/run.log`, `build/controls.log` |
+| Headless import | Same source snapshot | Godot 4.4.1 | `godot --headless --path game --editor --quit` | Passed | `build/import.log` |
+| Rendered screens / synthetic controls | Local working tree | Seed 4242; 1280×720 window | Scene rendering and synthetic mouse/keyboard events | Menu, combat and editor rendered; controls/death/retry pass. Human playtest not run | `build/screenshots/`; `test_controls.gd` |
+| Worst-trigger spell stress | Same source snapshot | Godot 4.4.1 | `test_stress.gd` | 10,000 casts, 800,000 contact attempts; limits respected. This is not target-hardware frame-time measurement | `build/stress.log` |
+| Windows artifact / fresh-machine check | `build/Spellforge.exe` | macOS cross-export, official matching templates | Windows Desktop debug export | Export passed; Windows execution NOT tested | `build/windows-export.log` |
+| Blind usability / replay | Pending | Pending | [PLAYTEST.md](PLAYTEST.md) | Not run | Pending |
+| Asset inventory | Local source | Original procedural art/audio | Provenance and in-game engine credits | Inventory present; owner license undecided | `game/assets/PROVENANCE.md` |
+| Steam review / public install | Pending | Pending | Authorized platform process | Not run | Pending |
+
+## Handoff boundary
+
+Repository work can implement gameplay, produce testable exports, and prepare review materials. It cannot substitute for a fresh Windows machine, independent blind testers, an owner's license decision, Steamworks account/fee/tax/bank actions, platform approval, or an authorized public release. Keep those gates open until the corresponding evidence exists. Consult [RELEASE.md](RELEASE.md) for the release checklist; verify current platform rules in Steamworks before making date commitments.
+
+## Local artifacts and limitations
+
+`build/Spellforge.exe` is the Windows debug playtest build. `build/Spellforge-macOS.zip` is an unsigned local macOS convenience build; it is not a notarized distribution release. Generated artifacts/logs are ignored by Git. `build/source-sha256.json` identifies the game source used for exports. Commit identity, draft PR and hosted CI status are recorded in the accompanying delivery. No Steam publication has been performed.
+
+`bun run check` passed (three supported tooling files); it does not validate GDScript. Godot performs the script parsing and runtime checks. Hosted GitHub Actions results must be checked against the published PR head; local results alone do not establish CI acceptance.
+
+The macOS engine exited 134 inside the filesystem sandbox. The same official 4.4.1 binary ran successfully with approved execution outside it; a sandbox-extension diagnostic remains at startup but the tests exit 0. Templates were used from temporary storage. The Windows export disables optional resource modification because no custom icon/version resources are supplied and the local machine has no `rcedit`. The local Mac packaging copy enables the required ETC2/ASTC import option.
+
+The arena pool shares rectangular collision geometry and varies visual layout, seeded composition and tactical spawn formations. Cast rules are deterministic; no claim is made of cross-platform bitwise full-input replay. Numeric balance and 10–15-minute pacing remain unvalidated. No human playtest results, performance acceptance, store imagery approval or launch outcomes have been invented.
+
+Final macOS package rendered using OpenGL on Apple M4 Pro and exited through the normal window-close notification with exit 0 and no ObjectDB warning (`build/macos-launch-close.log`). Normal Quit/window-close now awaits bounded audio cleanup. Godot's forced `--quit-after` bypasses this lifecycle and still reports an engine ObjectDB warning; it is not used as the clean-close acceptance path.
+
+GitHub status refresh on 2026-10-23: issue #2 was already closed before this delivery. This effort preserves that state and does not infer fresh-Windows acceptance from it. Issues #3–#11 were open at refresh.

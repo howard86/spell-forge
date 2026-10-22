@@ -1,4 +1,4 @@
-name: Godot foundation validation
+name: Godot game validation
 
 on:
   push:
@@ -15,6 +15,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Import project and check parse errors
         run: godot --headless --path game --editor --quit
+      - name: Test spell semantics
+        run: godot --headless --path game --script res://tests/test_spells.gd
+      - name: Test run progression
+        run: godot --headless --path game --script res://tests/test_run.gd
+      - name: Test keyboard and mouse controls
+        run: godot --headless --path game --script res://tests/test_controls.gd
+      - name: Stress bounded spell resolution
+        run: godot --headless --path game --script res://tests/test_stress.gd
       # The image installs templates under /root, but container jobs run with HOME=/github/home.
       - name: Setup export templates
         run: |
@@ -25,7 +33,7 @@ jobs:
           mkdir -p build
           godot --headless --path game --export-debug "Windows Desktop" ../build/Spellforge.exe
           test -s build/Spellforge.exe
-      - name: Upload Windows prototype
+      - name: Upload Windows demo candidate
         uses: actions/upload-artifact@v4
         with:
           name: spellforge-windows-debug
