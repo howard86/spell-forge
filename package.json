@@ -1,0 +1,25 @@
+{
+  "name": "spell-forge",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "format": "ultracite fix",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{json,jsonc,md}": [
+      "bun x ultracite fix"
+    ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@commitlint/config-conventional": "^21.2.0",
+    "commitlint": "^21.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
+    "ultracite": "7.12.4"
+  },
+  "packageManager": "bun@1.4.2"
+}
