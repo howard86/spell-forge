@@ -15,6 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Import project and check parse errors
         run: godot --headless --path game --editor --quit
+      # The image installs templates under /root, but container jobs run with HOME=/github/home.
+      - name: Setup export templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates
+          mv /root/.local/share/godot/export_templates/4.4.1.stable ~/.local/share/godot/export_templates/4.4.1.stable
       - name: Export Windows debug build
         run: |
           mkdir -p build

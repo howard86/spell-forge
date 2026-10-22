@@ -11,3 +11,8 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+# dependencies
+node_modules/
+# claude code (local config ignored; shared skills tracked for reuse)
+**/.claude/*
+!**/.claude/skills/

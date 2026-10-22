@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    # Dependabot appends ": bump …", keeping titles valid under conventional commitlint.
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      lint-tooling:
+        patterns:
+          - "@biomejs/biome"
+          - ultracite
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Dependabot appends ": bump …", keeping titles valid under conventional commitlint.
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      github-actions:
+        update-types:
+          - minor
+          - patch
