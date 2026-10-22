@@ -13,6 +13,13 @@ func key(code: Key, pressed: bool) -> void:
     event.physical_keycode = code
     event.pressed = pressed
     Input.parse_input_event(event)
+func wait_physics_frames(count: int) -> void:
+    # physics_frame fires before node callbacks. The final process_frame lets
+    # the last requested physics tick finish before assertions inspect state.
+    for frame in count:
+        await physics_frame
+    await process_frame
+
 func _initialize() -> void:
     call_deferred("run")
 func run() -> void:
@@ -40,13 +47,17 @@ func run() -> void:
         if child is Button and child.text == "Begin run":
             child.pressed.emit()
             break
-    await physics_frame
+    await wait_physics_frames(1)
     check(scene.state == "combat", "menu starts real scene")
     var start: Vector2 = scene.player_pos
+    var movement_start_time: float = scene.elapsed
     key(KEY_D, true)
-    await create_timer(0.08).timeout
+    var movement_key_pressed := Input.is_key_pressed(KEY_D)
+    await wait_physics_frames(4)
     key(KEY_D, false)
-    check(scene.player_pos.x > start.x + 5, "D input moves player")
+    check(scene.player_pos.x > start.x + 5,
+        "D input moves player (start=%s end=%s simulated_seconds=%.4f key_pressed=%s state=%s)" %
+        [start, scene.player_pos, scene.elapsed - movement_start_time, movement_key_pressed, scene.state])
     var mouse := InputEventMouseMotion.new()
     mouse.position = scene.player_pos + Vector2(150, 0)
     mouse.global_position = mouse.position
@@ -56,31 +67,31 @@ func run() -> void:
     click.position = mouse.position
     click.pressed = true
     Input.parse_input_event(click)
-    await create_timer(0.04).timeout
+    await wait_physics_frames(2)
     click.pressed = false
     Input.parse_input_event(click)
     check(scene.cast_id > 0 and scene.mana < 100, "mouse input casts")
     check(scene.aim.x > 0.9, "mouse input aims right")
     key(KEY_SPACE, true)
-    await physics_frame
+    await wait_physics_frames(1)
     key(KEY_SPACE, false)
     check(scene.dodge_time > 0 and scene.dodge_cooldown > 0, "space input dodges")
     key(KEY_ESCAPE, true)
-    await physics_frame
+    await wait_physics_frames(1)
     key(KEY_ESCAPE, false)
     check(scene.state == "paused", "Escape input pauses")
     var pause_time: float = scene.elapsed
-    await create_timer(0.05).timeout
+    await wait_physics_frames(3)
     check(scene.elapsed == pause_time, "paused physics does not advance combat")
     key(KEY_ESCAPE, true)
-    await physics_frame
+    await wait_physics_frames(1)
     key(KEY_ESCAPE, false)
     check(scene.state == "combat", "Escape input resumes")
     scene.hp = 12
     scene.hurt_time = 0
     scene.dodge_time = 0
     scene.add_projectile(scene.player_pos - Vector2(20, 0), Vector2.RIGHT, true)
-    await create_timer(0.08).timeout
+    await wait_physics_frames(4)
     check(scene.state == "death", "hostile projectile causes real death")
     for child in scene.content.get_children():
         if child is Button and child.text == "Retry this seed":
