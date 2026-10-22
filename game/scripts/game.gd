@@ -582,6 +582,7 @@ func load_settings() -> void:
                 settings[key] = value
 
 func update_hud() -> void:
+    hud.visible = state in ["menu", "combat", "paused"]
     if state == "menu":
         hud.text = "SPELLFORGE / THE RUNIC TRIALS"
     else:

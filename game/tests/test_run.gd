@@ -22,6 +22,8 @@ func run() -> void:
     check(Director.rewards(42, 0, ["projectile", "fire", "pierce", "split", "bounce", "chain", "explode", "cooldown"]) == ["restore"], "exhausted rewards fallback")
     game.start_run(42)
     check(game.state == "combat" and game.enemies.size() == 4, "start encounter")
+    game.update_hud()
+    check(game.hud.visible, "combat HUD visible")
     game.choose_reward("fire")
     check(game.owned == ["projectile"], "no rewards in combat")
     game.mana = 0
@@ -42,6 +44,8 @@ func run() -> void:
     game.dodge_time = 0
     game.damage_player(100)
     check(game.state == "death", "death summary")
+    game.update_hud()
+    check(not game.hud.visible, "death screen hides combat warnings and pause hint")
     game.start_run(42)
     check(game.hp == 100 and game.mana == 100 and game.kills == 0 and game.encounter_index == 0 and game.projectiles.is_empty(), "restart reset")
     # Scripted hits use the real resolver, kill accounting and reward UI, not auto-win controls.
@@ -63,6 +67,9 @@ func run() -> void:
         game.simulate(0.001)
         if index < 6:
             check(game.state == "reward", "combat to reward")
+            if index == 0:
+                game.update_hud()
+                check(not game.hud.visible, "reward screen hides combat warnings and pause hint")
             game.choose_reward(game.offers[0])
             check(game.selected_reward, "reward selected")
             var previous: int = game.owned.size()
@@ -75,6 +82,8 @@ func run() -> void:
             if index == 0:
                 check(game.message.is_empty() and game.message_time == 0, "new encounter clears prior combat warnings")
     check(game.state == "victory", "boss victory summary")
+    game.update_hud()
+    check(not game.hud.visible, "victory screen hides combat warnings and pause hint")
     game.start_run(777)
     game.compiled = game.Spell.compile(["projectile", "split", "pierce", "bounce"])
     game.cast_spell()
