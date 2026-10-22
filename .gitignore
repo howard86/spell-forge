@@ -1,0 +1,13 @@
+# Godot 4 generated state
+.godot/
+.import/
+# Imported/exported and local editor state
+*.translation
+.export/
+build/
+dist/
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
