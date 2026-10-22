@@ -27,3 +27,5 @@ An exploratory predecessor changed its patrol destination every three simulated 
 The 10–15-minute human run target remains **unverified**, and these sub-two-minute automated victories are a concrete pacing concern. Perfect aim and instantaneous choices favor this driver. Do not multiply enemy health or repeat encounters solely to force this script into a desired duration: that would not establish engaging human pacing. Collect blind and directed run times, reward/edit time, damage sources and player feedback using [PLAYTEST.md](PLAYTEST.md), then tune encounter content and resource pressure against those observations. Preserve this probe as a repeatable comparison when tuning.
 
 The three equipped spells share several components; these results do not satisfy the ten mechanically distinct viable-build gate. The probe also excludes rendering performance, audio perception, Windows graphical acceptance and independent tester comprehension.
+
+For a rendered run with normal reward/editor pauses and game audio, use the `--capture` mode described in [STORE_MEDIA.md](STORE_MEDIA.md). The default diagnostic mode and its outcome definitions are unchanged.

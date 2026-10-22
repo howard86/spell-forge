@@ -5,25 +5,31 @@ extends SceneTree
 ## Perfect nearest-target aim and a continuous rectangular patrol are scripted.
 ## Run: godot --headless --path game --script res://tests/probe_playthrough.gd
 var game
+var capture_mode := "--capture" in OS.get_cmdline_user_args()
 func _initialize():
     call_deferred("run")
 func run():
-    for seed_value in [4242, 12345, 1]:
+    for seed_value in ([4242] if capture_mode else [4242, 12345, 1]):
         game = load("res://scenes/main.tscn").instantiate()
         root.add_child(game)
         game.set_physics_process(false)
+        await hold_capture_frames(120)
         game.start_run(seed_value)
         var frames := 0
         var reward_log: Array = []
         var corner_index := 0
         while game.state in ["combat", "reward"] and frames < 54000:
             if game.state == "reward":
+                if capture_mode:
+                    print("CAPTURE_REWARD frame=", Engine.get_process_frames(), " encounter=", game.encounter_index)
+                await hold_capture_frames(120)
                 var choice = game.offers[0]
                 for preferred in ["fire", "chain", "pierce", "cooldown", "explode", "split", "bounce"]:
                     if game.offers.has(preferred):
                         choice = preferred
                         break
                 game.choose_reward(choice)
+                await hold_capture_frames(120)
                 reward_log.append(choice)
                 game.apply_reward()
             var nearest: Dictionary = {}
@@ -56,11 +62,24 @@ func run():
                 game._unhandled_input(dodge)
             game._physics_process(1.0 / 60.0)
             frames += 1
-            if frames % 60 == 0: await process_frame
+            if capture_mode or frames % 60 == 0: await process_frame
         print("RUN_PROBE ", JSON.stringify({"seed":seed_value,"state":game.state,"combat_seconds":game.elapsed,"hp":game.hp,"encounter":game.encounter_index,"kills":game.kills,"rewards":reward_log,"components":game.components}))
         for action in ["cast", "move_left", "move_right", "move_up", "move_down"]:
             Input.action_release(action)
+        if capture_mode:
+            print("CAPTURE_RESULT frame=", Engine.get_process_frames())
+        await hold_capture_frames(180)
         await game.audio.shutdown()
         game.queue_free()
         await process_frame
     quit()
+
+# Capture mode holds real reward/result UI and renders each simulation step.
+# Default diagnostic mode stays fast; neither mode modifies combat values.
+func hold_capture_frames(count: int) -> void:
+    if not capture_mode:
+        return
+    game.update_hud()
+    game.queue_redraw()
+    for i in count:
+        await process_frame

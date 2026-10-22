@@ -1,6 +1,6 @@
 # Spellforge Store Copy and Capture Brief
 
-**Internal draft — pending owner approval, captured-build verification, and Steam review.** This document prepares material for issues #6 and #11; it does not establish store readiness or authorize publication. Copy describes the implemented demo scope. It is not a promise of additional full-game content. No screenshots or video are attached to this document.
+**Internal draft — pending owner approval, captured-build verification, and Steam review.** This document prepares material for issues #6 and #11; it does not establish store readiness or authorize publication. Copy describes the implemented demo scope. It is not a promise of additional full-game content. [Internal review stills and a reproducible video capture](STORE_MEDIA.md) are available; public selection and approval remain pending.
 
 ## Short description
 
@@ -28,12 +28,12 @@ Capture the actual candidate build with its normal rendering, interface, sound, 
 
 | Shot | Implemented feature to show | Capture direction | Evidence / selection status |
 | --- | --- | --- | --- |
-| S01: Arena combat | Movement, aiming, casting and dodge | Show the wizard firing while avoiding a visible enemy warning; retain health, mana and trial HUD. | Pending actual capture and review. |
-| S02: Spell crafting | Reward choice and ordered editor | Capture an intermission with naturally earned components, slot order, mana cost and cast delay readable. Do not imply all eight components fit at once. | Pending actual capture and review. |
-| S03: Spell interaction | Pierce, split, chain, burn or explosion | Capture a legally equipped spell hitting enemies; choose a frame where an effect is legible and use video for behavior that cannot be established by a still. | Pending actual capture and review. |
-| S04: Enemy variety | Five normal roles across the run | Select actual encounters showing different roles and their telegraphs. Use separate real shots if they are not all present together. | Pending actual capture and review. |
-| S05: Warden | Boss projectiles, area hazards and phase change | Capture a reached boss fight, then a second-phase moment below half health. Keep the wizard and dangerous area readable. | Pending actual capture and review. |
-| S06: Result and retry | Victory/death summary and same-seed retry | Record the real result, visible seed, and retry transition. Keep this as supporting footage if it is less visually useful than combat. | Pending actual capture and review. |
+| S01: Arena combat | Movement, aiming, casting and dodge | Show the wizard firing while avoiding a visible enemy warning; retain health, mana and trial HUD. | Internal capture available; see [media review](STORE_MEDIA.md). Public selection pending. |
+| S02: Spell crafting | Reward choice and ordered editor | Capture an intermission with naturally earned components, slot order, mana cost and cast delay readable. Do not imply all eight components fit at once. | Internal capture available; see [media review](STORE_MEDIA.md). Public selection pending. |
+| S03: Spell interaction | Pierce, split, chain, burn or explosion | Capture a legally equipped spell hitting enemies; choose a frame where an effect is legible and use video for behavior that cannot be established by a still. | Internal capture available; see [media review](STORE_MEDIA.md). Public selection pending. |
+| S04: Enemy variety | Five normal roles across the run | Select actual encounters showing different roles and their telegraphs. Use separate real shots if they are not all present together. | Internal capture available; see [media review](STORE_MEDIA.md). Public selection pending. |
+| S05: Warden | Boss projectiles, area hazards and phase change | Capture a reached boss fight, then a second-phase moment below half health. Keep the wizard and dangerous area readable. | Internal capture available; see [media review](STORE_MEDIA.md). Public selection pending. |
+| S06: Result and retry | Victory/death summary and same-seed retry | Record the real result, visible seed, and retry transition. Keep this as supporting footage if it is less visually useful than combat. | Internal capture available; see [media review](STORE_MEDIA.md). Public selection pending. |
 
 Suggested gameplay video sequence: open with a readable combat moment, show a reward choice and spell edit, return to combat to show the resulting behavior, introduce a different enemy pattern, and finish with Warden gameplay. Use captured game audio. Any editorial text should describe the visible feature; do not add release dates, reception quotes, performance claims, or availability calls to action until verified and approved. Duration and delivery format remain editorial decisions after footage review.
 
