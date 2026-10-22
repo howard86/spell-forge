@@ -194,19 +194,19 @@ func _input(event: InputEvent) -> void:
         cursor_position = get_global_transform_with_canvas().affine_inverse() * event.position
 
 func _unhandled_input(event: InputEvent) -> void:
-    if event is InputEventKey and event.pressed and not event.echo:
-        if event.keycode == KEY_ESCAPE:
-            toggle_pause()
-        elif event.keycode == KEY_SPACE and state == "combat" and dodge_cooldown <= 0:
-            dodge_time = 0.24
-            dodge_cooldown = 1.05
-            dodge_direction = movement_direction()
-            if dodge_direction == Vector2.ZERO:
-                dodge_direction = aim
-            audio.play_sfx("dodge")
+    # Action events reject keyboard echoes by default and remain unhandled-only.
+    if event.is_action_pressed("pause"):
+        toggle_pause()
+    elif event.is_action_pressed("dodge") and state == "combat" and dodge_cooldown <= 0:
+        dodge_time = 0.24
+        dodge_cooldown = 1.05
+        dodge_direction = movement_direction()
+        if dodge_direction == Vector2.ZERO:
+            dodge_direction = aim
+        audio.play_sfx("dodge")
 
 func movement_direction() -> Vector2:
-    return Vector2(float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)), float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP))).normalized()
+    return Input.get_vector("move_left", "move_right", "move_up", "move_down")
 
 func _physics_process(delta: float) -> void:
     visual_time += delta
@@ -228,7 +228,7 @@ func simulate(delta: float) -> void:
         aim = Vector2.RIGHT
     player_pos += (dodge_direction * 650 if dodge_time > 0 else movement_direction() * 220) * delta
     player_pos = player_pos.clamp(ARENA.position + Vector2(14, 14), ARENA.end - Vector2(14, 14))
-    if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+    if Input.is_action_pressed("cast"):
         cast_spell()
     update_enemies(delta)
     update_projectiles(delta)

@@ -23,6 +23,8 @@ func wait_physics_frames(count: int) -> void:
 func _initialize() -> void:
     call_deferred("run")
 func run() -> void:
+    for action in ["move_left", "move_right", "move_up", "move_down", "cast", "dodge", "pause"]:
+        check(InputMap.has_action(action) and not InputMap.action_get_events(action).is_empty(), "configured InputMap action: " + action)
     root.size = Vector2i(960, 540)
     var scene = load("res://scenes/main.tscn").instantiate()
     root.add_child(scene)
@@ -98,6 +100,28 @@ func run() -> void:
             child.pressed.emit()
             break
     check(scene.state == "combat" and scene.hp == 100 and scene.encounter_index == 0, "retry UI resets run")
+    # Replace one movement binding, then restore its exact events/deadzone.
+    var original_events := InputMap.action_get_events("move_right")
+    var original_deadzone := InputMap.action_get_deadzone("move_right")
+    InputMap.action_erase_events("move_right")
+    var rebound := InputEventKey.new()
+    rebound.physical_keycode = KEY_L
+    InputMap.action_add_event("move_right", rebound)
+    var remap_start: Vector2 = scene.player_pos
+    key(KEY_D, true)
+    await wait_physics_frames(3)
+    key(KEY_D, false)
+    check(scene.player_pos.is_equal_approx(remap_start), "removed D binding no longer moves")
+    key(KEY_L, true)
+    await wait_physics_frames(4)
+    key(KEY_L, false)
+    check(scene.player_pos.x > remap_start.x + 5, "remapped L binding moves player")
+    Input.action_release("move_right")
+    InputMap.action_erase_events("move_right")
+    for event in original_events:
+        InputMap.action_add_event("move_right", event)
+    InputMap.action_set_deadzone("move_right", original_deadzone)
+    check(InputMap.action_get_events("move_right") == original_events and InputMap.action_get_deadzone("move_right") == original_deadzone, "original movement InputMap restored")
     scene.queue_free()
     await create_timer(0.2).timeout
     print("Controls integration: %d checks, %d failures" % [checks, failures])
