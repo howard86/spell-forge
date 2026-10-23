@@ -38,7 +38,7 @@ jobs:
           godot --headless --path game --export-debug "Windows Desktop" ../build/Spellforge.exe
           test -s build/Spellforge.exe
       - name: Upload Windows demo candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spellforge-windows-debug
           path: build/Spellforge.exe
@@ -92,7 +92,7 @@ jobs:
           if ($output -notmatch 'Export smoke: \d+ checks, 0 failures') { throw 'Packaged smoke did not report success' }
       - name: Upload Windows runtime logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spellforge-windows-runtime-logs
           path: ${{ runner.temp }}/spellforge-*.log
