@@ -1,6 +1,6 @@
 # Architecture and Engineering Guidelines
 
-**Stack:** Godot 4.4.1 + GDScript, Git/GitHub. The local implementation uses original code-rendered pixel art and synthesized audio. See [asset provenance](../game/assets/PROVENANCE.md) and [implementation status](IMPLEMENTATION_STATUS.md).
+**Stack:** Godot 4.7.2 + GDScript, Git/GitHub. The local implementation uses original code-rendered pixel art and synthesized audio. See [asset provenance](../game/assets/PROVENANCE.md) and [implementation status](IMPLEMENTATION_STATUS.md).
 
 ## Guiding constraints
 - Prioritize iteration speed over abstraction.

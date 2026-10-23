@@ -36,8 +36,8 @@ Windows controls checks verify that the license is available and displayed.
 
 Godot Engine, bundled fonts and other engine dependencies keep their own licenses.
 Credits obtains the engine license, copyright inventory and dependency license
-texts from the running engine binary, following the [Godot 4.4 attribution
-guidance](https://docs.godotengine.org/en/4.4/about/complying_with_licenses.html).
+texts from the running engine binary, following the [Godot 4.7 attribution
+guidance](https://docs.godotengine.org/en/4.7/about/complying_with_licenses.html).
 No engine or third-party material is relicensed by the project's MIT grant.
 Development-only Bun packages are not included in the game export; their upstream
 licenses remain applicable when those packages are redistributed.

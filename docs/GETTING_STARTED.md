@@ -1,7 +1,7 @@
 # Contributor Onboarding
 
 ## Requirements
-- Git and a compatible Godot 4 editor (initial project/CI assumes Godot 4.4.1).
+- Git, Godot 4.7.2, and matching 4.7.2 export templates.
 - Windows for target build smoke tests, or another development OS with export templates installed.
 - No proprietary assets are required for the current placeholder scene.
 - [Bun](https://bun.sh) for the repo tooling; optionally `brew install gitleaks typos-cli actionlint` for the local pre-commit scans (skipped with a warning when missing).
