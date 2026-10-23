@@ -1,24 +1,32 @@
-# Stage 1 Godot Foundation
+# Spellforge playable demo
 
-Requires **Godot 4.4.1** (chosen provisional pin for the first CI workflow; change consistently when upgrading). Open `game/project.godot` in Godot and run the main scene.
+Requires **Godot 4.7.2**. Open `game/project.godot` and run the main scene, or run `godot --path game` from the repository root.
 
-Current behavior: placeholder square character moves with **WASD / arrow keys**. This is deliberately not a combat prototype.
+Move with **WASD / arrows**, aim with the mouse, hold left click to cast, press **Space** to dodge, and **Esc** to pause. Enter an integer seed to repeat encounters and rewards. Clear six trials, choose components and edit your ordered spell between fights, then defeat the Warden. Settings persist locally; no account or network service is required.
 
-## Local smoke check
+## Checks
+
 ```sh
 godot --headless --path game --editor --quit
-godot --path game
+godot --headless --path game --script res://tests/test_spells.gd
+godot --headless --path game --script res://tests/test_run.gd
+godot --headless --path game --script res://tests/test_controls.gd
+godot --headless --path game --script res://tests/test_stress.gd
 ```
 
-Windows export requires matching export templates:
+Debug exports support a fixed packaged smoke check: `Spellforge.exe --headless -- --smoke-test` (12 checks); omit `--headless` to also check the rendered viewport. The mode uses isolated settings, tests startup, notices, movement, casting, pause, death/retry and audio cleanup, then exits. It does not load external scripts and is disabled in release builds. Godot 4.7.2 export templates do not support the editor’s `--script` entry point. CI runs all regression/stress scripts with the matching Linux and Windows editors, then checks the downloaded Windows executable through this smoke mode.
+
+The integration suite uses scripted inputs and isolated settings. It verifies rules and transitions, not human pacing or balance.
+
+## Windows export
+
+Install matching export templates, then:
+
 ```sh
 mkdir -p build
 godot --headless --path game --export-debug "Windows Desktop" ../build/Spellforge.exe
 ```
 
-The associated GitHub Actions workflow is a **first-pass, unverified** CI configuration. Confirm action availability, template compatibility, import success, and Windows runtime behavior before marking [Stage 1](https://github.com/howard86/spell-forge/issues/2) complete.
+The executable embeds its game data. Test it on Windows separately: exporting on macOS or Linux does not establish Windows runtime acceptance. CI runs the rules and integration suites before exporting. See the evidence ledger for completed workflow runs and their tested revisions.
 
-## Scope
-Next stage will add action-based inputs, collisions, mouse aim, casting, dodge, enemy behavior, damage and restart. The current direct key polling is intentionally temporary.
-
-Asset licensing remains undecided; only built-in vector placeholder visuals are included.
+Original procedural visuals/audio are documented in [asset provenance](assets/PROVENANCE.md). The project is MIT licensed; see [LICENSE](../LICENSE) and the in-game credits for engine and third-party notices. See [implementation evidence](../docs/IMPLEMENTATION_STATUS.md) for release limitations.

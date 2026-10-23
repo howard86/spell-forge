@@ -1,8 +1,8 @@
 # Spellforge
 
-**Spellforge** is a planned single-player, top-down pixel-art action roguelite about programming powerful spells from modular magical components.
+**Spellforge** is a single-player, top-down pixel-art action roguelite about programming spells from modular magical components.
 
-> **Project status:** Pre-production. This repository describes the proposed MVP; gameplay, builds, and Steam availability are not yet implemented or announced.
+> **Project status:** Local demo implementation in development. Release gates, Windows acceptance, external playtests, and Steam publication remain pending. See [implementation status](docs/IMPLEMENTATION_STATUS.md) for evidence and limitations.
 
 ## Vision
 
@@ -27,13 +27,13 @@ The initial plan assumes a solo developer working roughly 15–20 hours per week
 - [Decision log](docs/DECISIONS.md)
 - [Getting started](docs/GETTING_STARTED.md)
 
-**Current first priority:** Validate enjoyable combat and ordered spell construction before expanding content. See the [roadmap](docs/ROADMAP.md) for stage-by-stage goals and exit criteria.
+**Current first priority:** Validate combat and ordered spell construction with players before expanding content. See the [playtest protocol](docs/PLAYTEST.md) and [roadmap](docs/ROADMAP.md).
 
-The contents of these documents are **planning proposals** rather than evidence that features have already been built.
+Design targets and measured acceptance are distinct; a working implementation does not establish pacing, usability, or release readiness.
 
 ## Tracking status
 
-Seven stage issues ([#2–#8](https://github.com/howard86/spell-forge/issues)) currently act as milestone trackers. Actual GitHub milestone objects have **not yet been created** because the connected integration lacks milestone administration. Stage 1 source files are present, but runtime/CI verification is still pending.
+Seven [GitHub milestones](https://github.com/howard86/spell-forge/milestones) track the stage issues #2–#8. Cross-stage design, licensing and Steamworks issues are assigned to their relevant milestones. The local playable implementation and verification are tracked in [the evidence ledger](docs/IMPLEMENTATION_STATUS.md); external release gates remain open.
 
 ## Links
 
@@ -42,4 +42,4 @@ Seven stage issues ([#2–#8](https://github.com/howard86/spell-forge/issues)) c
 
 ## License
 
-No license has been selected. All rights reserved unless a license is added explicitly. Do not assume that third-party game assets may be redistributed.
+Original project source code, documentation, procedural artwork, and synthesized audio are licensed under the [MIT License](LICENSE). Godot, its bundled font/libraries, and development dependencies retain their own licenses and notices. See [provenance and attribution](game/assets/PROVENANCE.md).

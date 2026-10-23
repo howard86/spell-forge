@@ -1,7 +1,7 @@
 # Contributor Onboarding
 
 ## Requirements
-- Git and a compatible Godot 4 editor (initial project/CI assumes Godot 4.4.1).
+- Git, Godot 4.7.2, and matching 4.7.2 export templates.
 - Windows for target build smoke tests, or another development OS with export templates installed.
 - No proprietary assets are required for the current placeholder scene.
 - [Bun](https://bun.sh) for the repo tooling; optionally `brew install gitleaks typos-cli actionlint` for the local pre-commit scans (skipped with a warning when missing).
@@ -15,7 +15,7 @@ godot --headless --path game --editor --quit
 godot --path game
 ```
 
-Move the placeholder character with WASD/arrow keys. Spell casting and enemies are **not yet implemented**.
+Move with WASD/arrow keys, aim with the mouse, hold left click to cast, press Space to dodge, and Esc to pause. Clear six encounters, craft between fights, and challenge the boss. Enter a seed on the menu for repeatable encounters and rewards. See [game instructions](../game/README.md) for regression commands.
 
 ## Build smoke test
 ```sh
@@ -30,4 +30,4 @@ Read [GDD](GAME_DESIGN.md), [milestone register](MILESTONES.md), and [spell cont
 Commit messages follow conventional commitlint, e.g. `✨ feat(spells): add chain component`. Run `bun run check` (or `bun run fix`) before pushing; CI runs the same lint plus typos, gitleaks and actionlint.
 
 ## Current blockers
-Actual GitHub milestone objects were not available through the connected integration at setup time. See [MILESTONES.md](MILESTONES.md) for the authoritative issue-linked substitute.
+The [milestone register](MILESTONES.md) links the live GitHub milestones and their acceptance gates. Human playtesting and Steam approvals remain external dependencies.

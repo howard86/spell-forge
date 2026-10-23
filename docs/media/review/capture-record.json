@@ -1,0 +1,32 @@
+{
+  "revision": "ab5a8f3d82c9875790ec0f4e3b057660bda3ca42",
+  "seed": 4242,
+  "engine": "4.4.1",
+  "resolution": [1280, 720],
+  "type": "internal automated normal-combat progression capture",
+  "method": "Capture mode in game/tests/probe_playthrough.gd, fixed1/60 simulation steps, scripted inputs and legal rewards; no combat-value overrides. Unedited real-time video with original game audio.",
+  "public_media_approved": false,
+  "human_playtest": false,
+  "files": [
+    {
+      "file": "combat.png",
+      "video_second": 16,
+      "sha256": "b2e2f4533c73f75fd31ccd643d874b4bb0f8979b48f3610ea367da8fda3189fa"
+    },
+    {
+      "file": "editor.png",
+      "video_second": 11,
+      "sha256": "bd69a8eccc0782bfb998d11bc899d989d33d5a7b1b6d06bed67749214ad23505"
+    },
+    {
+      "file": "boss.png",
+      "video_second": 135,
+      "sha256": "faa23e8a7247a817b81c6677292ade5dc1a69625740b81589ba072d646c370f4"
+    },
+    {
+      "file": "victory.png",
+      "video_second": 147,
+      "sha256": "081fa03c0958ca70b70ec0bca8e7a4155dcd502ba85c9f095ae65900229886c8"
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+extends RefCounted
+## Original pixel silhouettes and masonry, drawn at integer coordinates.
+
+const Audio = preload("res://scripts/game_audio.gd")
+const INK = Color("111726")
+const STONE = Color("283342")
+const EDGE = Color("3b4b59")
+const TEAL = Color("67d9cb")
+const GOLD = Color("e6bc78")
+const RED = Color("ef806f")
+
+static func create_audio() -> Node:
+    return Audio.new()
+
+static func _box(c: Node2D, p: Vector2, x: float, y: float, w: float, h: float, color: Color) -> void:
+    c.draw_rect(Rect2(p + Vector2(x, y), Vector2(w, h)), color)
+
+static func _diamond(c: Node2D, p: Vector2, r: float, color: Color) -> void:
+    c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)]), color)
+
+static func draw_arena(c: Node2D, rect: Rect2, layout: int, time: float) -> void:
+    c.draw_rect(Rect2(0, 0, 960, 540), INK)
+    c.draw_rect(rect.grow(10), Color("171f2d"))
+    c.draw_rect(rect.grow(5), EDGE, false, 2)
+    c.draw_rect(rect, Color("1e2835"))
+    # Decoration is flat floor detail: it never implies a collidable obstacle.
+    for y in range(int(rect.position.y), int(rect.end.y), 32):
+        for x in range(int(rect.position.x), int(rect.end.x), 48):
+            var shade := int(x / 48.0 + y / 32.0 * 7 + layout * 3) % 5
+            var tile := Rect2(x + 1, y + 1, minf(46, rect.end.x - x - 1), minf(30, rect.end.y - y - 1))
+            if tile.size.x <= 0 or tile.size.y <= 0:
+                continue
+            c.draw_rect(tile, Color(0.12 + shade * 0.006, 0.16 + shade * 0.006, 0.21 + shade * 0.007))
+            c.draw_line(tile.position, tile.position + Vector2(tile.size.x, 0), Color("303c49"))
+            if shade == 0:
+                c.draw_line(tile.position + Vector2(8, 12), tile.position + Vector2(17, 14), Color("17222f"))
+    var center := rect.get_center()
+    var rune_color := Color(0.28, 0.53, 0.54, 0.17)
+    c.draw_arc(center, 92 + layout * 12, 0, TAU, 48, rune_color, 2)
+    c.draw_arc(center, 102 + layout * 12, 0, TAU, 48, rune_color, 1)
+    for i in range(8):
+        _diamond(c, center + Vector2.from_angle(i * TAU / 8.0) * (97 + layout * 12), 4, rune_color)
+    for corner in [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]:
+        var inward: Vector2 = (center - corner).sign()
+        var p: Vector2 = corner + inward * 15
+        _box(c, p, -9, -8, 18, 20, INK)
+        _box(c, p, -7, -8, 14, 14, EDGE)
+        _box(c, p, -5, -6, 10, 6, STONE)
+        _box(c, p, -2, -7, 4, 9, TEAL.darkened(0.45))
+        var flame := 2 + int(sin(time * 3.0 + p.x) * 1.5)
+        _box(c, p, -3, -15, 6, 7, TEAL.darkened(0.25))
+        _box(c, p, -1, -16 - flame, 2, 8 + flame, Color("b9f5df"))
+    for i in range(12):
+        var p := Vector2(rect.position.x + fposmod(i * 79.0 + time * 2, rect.size.x), rect.position.y + fposmod(i * 43.0 - time * 4, rect.size.y))
+        _box(c, p.floor(), 0, 0, 2, 2, Color(0.5, 0.75, 0.7, 0.18))
+
+static func draw_player(c: Node2D, position: Vector2, aim: Vector2, dodging: bool, hurt: bool, _time: float) -> void:
+    var p := position.round()
+    var robe := Color("568eaf") if not hurt else Color("f4d5c3")
+    if dodging:
+        for i in range(1, 4):
+            _box(c, p - aim.normalized() * i * 7, -7, -9, 14, 19, Color(0.4, 0.85, 0.84, 0.22 / i))
+    _box(c, p, -10, 9, 21, 4, Color(0.03, 0.06, 0.1, 0.6))
+    _box(c, p, -7, -5, 14, 17, INK)
+    _box(c, p, -6, -4, 12, 14, robe)
+    _box(c, p, -8, 5, 16, 5, robe.darkened(0.2))
+    _box(c, p, -3, -4, 3, 14, robe.lightened(0.23))
+    _box(c, p, -5, 10, 4, 3, INK)
+    _box(c, p, 3, 10, 4, 3, INK)
+    _box(c, p, -5, -13, 11, 10, INK)
+    _box(c, p, -3, -11, 7, 6, Color("d9be9c"))
+    _box(c, p, -10, -14, 21, 4, INK)
+    _box(c, p, -9, -15, 18, 3, robe)
+    _box(c, p, -5, -21, 10, 7, robe)
+    _box(c, p, -2, -25, 5, 5, robe)
+    _box(c, p, 1, -27, 5, 3, robe)
+    _box(c, p, -5, -17, 10, 2, GOLD)
+    var side := 1.0 if aim.x >= 0 else -1.0
+    _box(c, p, side * 12, -13, 2, 25, GOLD.darkened(0.25))
+    _diamond(c, p + Vector2(side * 13 + 1, -16), 5, INK)
+    _diamond(c, p + Vector2(side * 13 + 1, -17), 3, TEAL)
+    _box(c, p, 1 if side > 0 else -3, -9, 2, 2, INK)
+    _diamond(c, p + aim.normalized() * 24, 2, Color(0.6, 0.95, 0.88, 0.55))
+
+static func draw_enemy(c: Node2D, enemy: Dictionary, time: float) -> void:
+    var p: Vector2 = enemy.position.round()
+    var kind: String = enemy.kind
+    var r: float = enemy.radius
+    if float(enemy.get("telegraph", 0.0)) > 0:
+        c.draw_arc(p, r + 7, 0, TAU, 24, GOLD, 2)
+        var aim: Vector2 = enemy.get("aim", Vector2.DOWN)
+        c.draw_line(p + aim * (r + 9), p + aim * (r + 30), GOLD, 2)
+    _box(c, p, -r, r * 0.55, r * 2, 5, Color(0.02, 0.04, 0.08, 0.65))
+    match kind:
+        "pursuer":
+            _box(c, p, -8, -10, 16, 20, INK)
+            _box(c, p, -6, -7, 12, 16, Color("a95162"))
+            _box(c, p, -7, -14, 14, 9, Color("d4bca5"))
+            _box(c, p, -4, -11, 8, 3, INK)
+            _box(c, p, -11, 0, 4, 12, Color("e4a08a"))
+            _box(c, p, 8, -4, 3, 14, Color("e4a08a"))
+        "archer":
+            _box(c, p, -7, -9, 14, 20, INK)
+            _box(c, p, -5, -6, 10, 16, Color("8f7858"))
+            _box(c, p, -6, -15, 12, 10, Color("b4a17a"))
+            _box(c, p, -3, -11, 7, 3, INK)
+            c.draw_arc(p + Vector2(7, -1), 10, -1.2, 1.2, 6, GOLD, 3)
+            c.draw_line(p + Vector2(10, -10), p + Vector2(10, 9), Color("ece0bd"))
+        "bulwark":
+            _box(c, p, -13, -13, 26, 25, INK)
+            _box(c, p, -10, -10, 20, 20, Color("697b85"))
+            _box(c, p, -7, -17, 14, 10, Color("98a8a9"))
+            _box(c, p, -5, -13, 10, 3, INK)
+            _box(c, p, -15, -4, 13, 20, INK)
+            _box(c, p, -13, -3, 9, 16, Color("aa916b"))
+            _box(c, p, -10, -1, 3, 12, GOLD)
+        "swarm":
+            var wing := roundf(2.0 * sin(time * 14 + p.x))
+            _box(c, p, -12, -5 + wing, 8, 5, Color("b091bd"))
+            _box(c, p, 4, -5 - wing, 8, 5, Color("b091bd"))
+            _diamond(c, p, 7, INK)
+            _diamond(c, p, 5, Color("c9a7cb"))
+            _box(c, p, -2, -2, 4, 2, INK)
+        "channeler":
+            _box(c, p, -9, -6, 18, 18, INK)
+            _box(c, p, -7, -5, 14, 15, Color("876fa7"))
+            _box(c, p, -5, -15, 10, 12, Color("af97c3"))
+            _box(c, p, -3, -11, 6, 4, INK)
+            _diamond(c, p + Vector2(0, -23), 5, GOLD)
+            _box(c, p, -14, -8, 4, 10, Color("af97c3"))
+            _box(c, p, 10, -8, 4, 10, Color("af97c3"))
+        "warden", "boss":
+            var armor := Color("768d9b") if int(enemy.get("phase", 1)) < 2 else Color("b77d91")
+            _box(c, p, -22, -23, 44, 44, INK)
+            _box(c, p, -17, -19, 34, 37, armor.darkened(0.25))
+            _box(c, p, -26, -20, 13, 17, armor)
+            _box(c, p, 13, -20, 13, 17, armor)
+            _box(c, p, -11, -34, 22, 19, armor)
+            _box(c, p, -15, -39, 5, 14, GOLD)
+            _box(c, p, 10, -39, 5, 14, GOLD)
+            _box(c, p, -8, -28, 16, 4, INK)
+            _box(c, p, -6, -27, 12, 2, RED)
+            _diamond(c, p + Vector2(0, -4), 9, INK)
+            _diamond(c, p + Vector2(0, -4), 6, GOLD)
+            _box(c, p, -17, 17, 12, 8, armor)
+            _box(c, p, 5, 17, 12, 8, armor)
+        _:
+            _diamond(c, p, r, RED)
+    var hp: float = float(enemy.hp) / maxf(float(enemy.max_hp), 1.0)
+    if hp < 1.0:
+        _box(c, p, -r, r + 9, r * 2, 3, INK)
+        _box(c, p, -r, r + 9, r * 2 * clampf(hp, 0, 1), 2, RED)
+
+static func draw_projectile(c: Node2D, projectile: Dictionary, _time: float) -> void:
+    var p: Vector2 = projectile.position.round()
+    var direction: Vector2 = projectile.get("direction", Vector2.RIGHT)
+    var hostile: bool = projectile.get("enemy", false)
+    var fire: bool = projectile.get("fire", false)
+    var r: float = projectile.get("radius", 4.0)
+    var color := RED if hostile else (GOLD if fire else TEAL)
+    c.draw_line(p - direction * 14, p, color.darkened(0.45), 3)
+    if hostile:
+        _diamond(c, p, r + 2, INK)
+        _diamond(c, p, r, color)
+        _box(c, p, -1, -1, 2, 2, Color("ffe3bd"))
+    else:
+        _box(c, p, -r, -r, r * 2, r * 2, color)
+        _box(c, p, -2, -2, 4, 4, Color("e4fff4"))
+
+static func draw_hazard(c: Node2D, hazard: Dictionary, _time: float) -> void:
+    var p: Vector2 = hazard.position
+    var r: float = hazard.radius
+    var progress: float = clampf(hazard.get("progress", 0.0), 0, 1)
+    c.draw_circle(p, r, Color(0.9, 0.3, 0.27, 0.1))
+    c.draw_arc(p, r, 0, TAU, 32, RED, 2)
+    c.draw_arc(p, r - 4, -PI / 2, -PI / 2 + TAU * maxf(progress, 0.001), 32, GOLD, 3)
+    for i in range(4):
+        _diamond(c, p + Vector2.from_angle(i * PI / 2) * r, 4, RED)
+    c.draw_line(p - Vector2(5, 5), p + Vector2(5, 5), RED, 2)
+    c.draw_line(p + Vector2(-5, 5), p + Vector2(5, -5), RED, 2)

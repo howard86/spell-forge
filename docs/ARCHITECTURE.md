@@ -1,6 +1,6 @@
 # Architecture and Engineering Guidelines
 
-**Proposed stack:** Godot 4 + GDScript, Git/GitHub, pixel art created or licensed externally. No code or chosen engine version is currently committed; validate tooling during Stage 1.
+**Stack:** Godot 4.7.2 + GDScript, Git/GitHub. The local implementation uses original code-rendered pixel art and synthesized audio. See [asset provenance](../game/assets/PROVENANCE.md) and [implementation status](IMPLEMENTATION_STATUS.md).
 
 ## Guiding constraints
 - Prioritize iteration speed over abstraction.
