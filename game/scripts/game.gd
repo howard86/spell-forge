@@ -48,6 +48,9 @@ var exit_requested := false
 
 func _ready() -> void:
     get_tree().auto_accept_quit = false
+    var smoke_test := OS.is_debug_build() and "--smoke-test" in OS.get_cmdline_user_args()
+    if smoke_test:
+        settings_path = "user://export-smoke-%d.cfg" % Time.get_ticks_usec()
     load_settings()
     audio = Art.create_audio()
     add_child(audio)
@@ -66,6 +69,11 @@ func _ready() -> void:
     content.add_theme_constant_override("separation", 8)
     panel.add_child(content)
     show_menu()
+    if smoke_test:
+        call_deferred("run_export_smoke")
+
+func run_export_smoke() -> void:
+    await preload("res://scripts/export_smoke.gd").new().run(self)
 
 func clear_panel() -> void:
     for child in content.get_children():

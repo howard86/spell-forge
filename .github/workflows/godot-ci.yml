@@ -10,9 +10,11 @@ jobs:
   validate-and-export:
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.4.1
+      image: barichello/godot-ci:4.7.2
     steps:
       - uses: actions/checkout@v4
+      - name: Verify engine version
+        run: godot --version | grep -E '^4\.7\.2\.stable\.'
       - name: Verify packaged project license matches repository license
         run: cmp LICENSE game/assets/LICENSE.txt
       - name: Import project and check parse errors
@@ -29,7 +31,7 @@ jobs:
       - name: Setup export templates
         run: |
           mkdir -p ~/.local/share/godot/export_templates
-          mv /root/.local/share/godot/export_templates/4.4.1.stable ~/.local/share/godot/export_templates/4.4.1.stable
+          mv /root/.local/share/godot/export_templates/4.7.2.stable ~/.local/share/godot/export_templates/4.7.2.stable
       - name: Export Windows debug build
         run: |
           mkdir -p build
@@ -53,29 +55,41 @@ jobs:
         with:
           name: spellforge-windows-debug
           path: build
+      - name: Run full regression suites with the matching Windows editor
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'godot.zip'
+          $editorDir = Join-Path $env:RUNNER_TEMP 'godot'
+          Invoke-WebRequest 'https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip' -OutFile $archive
+          Expand-Archive $archive -DestinationPath $editorDir
+          $editor = Join-Path $editorDir 'Godot_v4.7.2-stable_win64_console.exe'
+          foreach ($suite in @('spells', 'run', 'controls', 'stress')) {
+            $log = Join-Path $env:RUNNER_TEMP "spellforge-$suite.log"
+            & $editor --headless --path game --script "res://tests/test_$suite.gd" --log-file $log
+            if ($LASTEXITCODE -ne 0) { throw "$suite exited with code $LASTEXITCODE" }
+            $output = Get-Content $log -Raw
+            if ($output -match 'SCRIPT ERROR:|ERROR:|ObjectDB instances.*leaked') { throw "$suite reported a runtime error" }
+            if ($output -notmatch '\d+ checks, 0 failures|STRESS_OK:') { throw "$suite did not report success" }
+          }
       - name: Exercise the packaged game on Windows
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $game = Join-Path $env:GITHUB_WORKSPACE 'build/Spellforge.exe'
-          foreach ($suite in @('spells', 'run', 'controls')) {
-            $script = Join-Path $env:GITHUB_WORKSPACE "game/tests/test_$suite.gd"
-            $log = Join-Path $env:RUNNER_TEMP "spellforge-$suite.log"
-            $process = Start-Process -FilePath $game -ArgumentList @(
-              '--headless', '--script', $script, '--log-file', $log
-            ) -NoNewWindow -PassThru -Wait
-            if ($process.ExitCode -ne 0) {
-              throw "$suite exited with code $($process.ExitCode)"
-            }
-            $output = Get-Content $log -Raw
-            Write-Output $output
-            if ($output -match 'SCRIPT ERROR:|ERROR:|ObjectDB instances leaked') {
-              throw "$suite reported a runtime error"
-            }
-            if ($output -notmatch '\d+ checks, 0 failures') {
-              throw "$suite did not report successful assertions"
-            }
+          $log = Join-Path $env:RUNNER_TEMP 'spellforge-export.log'
+          $process = Start-Process -FilePath $game -ArgumentList @(
+            '--headless', '--log-file', $log, '--', '--smoke-test'
+          ) -NoNewWindow -PassThru
+          if (-not $process.WaitForExit(60000)) {
+            $process.Kill()
+            throw 'Packaged smoke timed out'
           }
+          if ($process.ExitCode -ne 0) { throw "Packaged smoke exited with code $($process.ExitCode)" }
+          $output = Get-Content $log -Raw
+          Write-Output $output
+          if ($output -match 'SCRIPT ERROR:|ERROR:|ObjectDB instances.*leaked') { throw 'Packaged smoke reported a runtime error' }
+          if ($output -notmatch 'Export smoke: \d+ checks, 0 failures') { throw 'Packaged smoke did not report success' }
       - name: Upload Windows runtime logs
         if: always()
         uses: actions/upload-artifact@v4
