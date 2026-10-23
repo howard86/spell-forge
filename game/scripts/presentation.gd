@@ -86,10 +86,34 @@ static func draw_enemy(c: Node2D, enemy: Dictionary, time: float) -> void:
     var p: Vector2 = enemy.position.round()
     var kind: String = enemy.kind
     var r: float = enemy.radius
+    var facing: Vector2 = enemy.get("aim", Vector2.DOWN)
+    if kind == "bulwark":
+        # Matches the damage guard: incoming direction dot aim < -0.35.
+        var half_arc := acos(0.35)
+        c.draw_arc(p, r + 5, facing.angle() - half_arc, facing.angle() + half_arc, 20, TEAL, 4)
+    if not enemy.get("burn", {}).is_empty():
+        var flame := p + Vector2(r + 8, -18)
+        _diamond(c, flame, 5, GOLD)
+        _box(c, flame, -2, -8, 4, 9, RED)
+        _box(c, flame, -1, -4, 2, 6, Color("fff0b0"))
     if float(enemy.get("telegraph", 0.0)) > 0:
-        c.draw_arc(p, r + 7, 0, TAU, 24, GOLD, 2)
-        var aim: Vector2 = enemy.get("aim", Vector2.DOWN)
-        c.draw_line(p + aim * (r + 9), p + aim * (r + 30), GOLD, 2)
+        if kind in ["pursuer", "swarm", "bulwark"]:
+            var tip := p + facing * (45 if kind == "bulwark" else 68)
+            c.draw_line(p + facing * r, tip, GOLD, 3)
+            c.draw_line(tip, tip - facing.rotated(0.6) * 15, GOLD, 3)
+            c.draw_line(tip, tip - facing.rotated(-0.6) * 15, GOLD, 3)
+        if kind in ["archer", "boss"]:
+            var shots: int = (7 if enemy.phase == 2 else 5) if kind == "boss" else 1
+            for i in shots:
+                var direction := facing.rotated((i - (shots - 1) / 2.0) * 0.22)
+                c.draw_line(p + direction * (r + 8), p + direction * (r + 53), RED, 1)
+        if kind in ["channeler", "boss"]:
+            # Overhead casting sigil; the actual ground hazard marks its target.
+            var sigil := p + Vector2(0, -r - 22)
+            _diamond(c, sigil, 9, GOLD)
+            _diamond(c, sigil, 6, INK)
+            c.draw_line(sigil - Vector2(12, 0), sigil + Vector2(12, 0), GOLD, 2)
+            c.draw_line(sigil - Vector2(0, 12), sigil + Vector2(0, 12), GOLD, 2)
     _box(c, p, -r, r * 0.55, r * 2, 5, Color(0.02, 0.04, 0.08, 0.65))
     match kind:
         "pursuer":

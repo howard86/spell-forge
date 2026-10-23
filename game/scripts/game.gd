@@ -33,7 +33,10 @@ var components: Array = ["projectile"]
 var draft: Array = []
 var compiled: Dictionary = {}
 var offers: Array = []
+var selected_component := "projectile"
 var selected_reward := false
+var resource_notice := ""
+var resource_notice_time := 0.0
 var message := ""
 var message_time := 0.0
 var settings_path := "user://settings.cfg"
@@ -41,7 +44,7 @@ var settings := {"master": 0.7, "music": 0.35, "sfx": 0.7, "shake": true, "reduc
 var ui: CanvasLayer
 var panel: PanelContainer
 var content: VBoxContainer
-var hud: Label
+var hud: Control
 var audio: Node
 var seed_input: LineEdit
 var exit_requested := false
@@ -57,16 +60,24 @@ func _ready() -> void:
     apply_audio()
     ui = CanvasLayer.new()
     add_child(ui)
-    hud = Label.new()
-    hud.position = Vector2(36, 16)
-    hud.add_theme_font_size_override("font_size", 18)
+    hud = preload("res://scripts/combat_hud.gd").new()
+    hud.game = self
     ui.add_child(hud)
     panel = PanelContainer.new()
-    panel.position = Vector2(160, 90)
-    panel.custom_minimum_size = Vector2(640, 340)
+    panel.position = Vector2(80, 94)
+    panel.custom_minimum_size = Vector2(800, 340)
+    var surface := StyleBoxFlat.new()
+    surface.bg_color = Art.INK
+    surface.border_color = Art.TEAL.darkened(0.4)
+    surface.set_border_width_all(2)
+    surface.content_margin_left = 18
+    surface.content_margin_right = 18
+    surface.content_margin_top = 12
+    surface.content_margin_bottom = 12
+    panel.add_theme_stylebox_override("panel", surface)
     ui.add_child(panel)
     content = VBoxContainer.new()
-    content.add_theme_constant_override("separation", 8)
+    content.add_theme_constant_override("separation", 5)
     panel.add_child(content)
     show_menu()
     if smoke_test:
@@ -79,6 +90,7 @@ func clear_panel() -> void:
     for child in content.get_children():
         content.remove_child(child)
         child.queue_free()
+    panel.size = Vector2(800, 340)
     panel.show()
 
 func label_text(value: String, size: int = 18) -> Label:
@@ -160,6 +172,7 @@ func start_run(seed_value: int) -> void:
     next_id = 1
     cast_id = 0
     owned = ["projectile"]
+    selected_component = "projectile"
     components = ["projectile"]
     compiled = Spell.compile(components)
     message = ""
@@ -167,8 +180,10 @@ func start_run(seed_value: int) -> void:
 
 func start_encounter() -> void:
     state = "combat"
-    message = ""
-    message_time = 0.0
+    message = "WARDEN CHAMBER · break the Warden" if encounter_index == 6 else "TRIAL %d / 6 · clear every enemy" % (encounter_index + 1)
+    message_time = 2.5
+    resource_notice = ""
+    resource_notice_time = 0.0
     panel.hide()
     enemies.clear()
     projectiles.clear()
@@ -233,6 +248,7 @@ func simulate(delta: float) -> void:
     dodge_cooldown = maxf(0, dodge_cooldown - delta)
     hurt_time = maxf(0, hurt_time - delta)
     message_time = maxf(0, message_time - delta)
+    resource_notice_time = maxf(0, resource_notice_time - delta)
     mana = minf(100, mana + delta * 22)
     aim = (cursor_position - player_pos).normalized()
     if aim == Vector2.ZERO:
@@ -259,8 +275,8 @@ func cast_spell() -> bool:
     if state != "combat" or cooldown > 0:
         return false
     if mana < float(compiled.mana_cost):
-        message = "Mana recovering… simplify your spell between trials."
-        message_time = 1.0
+        resource_notice = "Mana recovering · need %d mana" % compiled.mana_cost
+        resource_notice_time = 1.0
         return false
     if projectiles.size() >= MAX_PROJECTILES:
         return false
@@ -295,7 +311,7 @@ func update_enemies(delta: float) -> void:
         var distance := to_player.length()
         if enemy.kind == "boss" and enemy.hp < enemy.max_hp * 0.5 and enemy.phase == 1:
             enemy.phase = 2
-            message = "WARDEN ENRAGED — watch the expanding marks!"
+            message = "WARDEN ENRAGED · watch the marks!"
             message_time = 3.0
         if enemy.telegraph > 0:
             enemy.telegraph -= delta
@@ -513,46 +529,118 @@ func choose_reward(id: String) -> void:
         hp = minf(100, hp + 25)
     elif not owned.has(id):
         owned.append(id)
+        selected_component = id
         if draft.size() < 5:
             draft.append(id)
     show_reward()
 
+func component_icon(id: String) -> String:
+    return {"projectile": "◆", "fire": "▲", "pierce": "⇥", "split": "⑂", "bounce": "↔", "chain": "ϟ", "explode": "✦", "cooldown": "◷", "restore": "+"}.get(id, "◆")
+
+func component_use(id: String) -> String:
+    return {"projectile": "Your spell starts here.", "fire": "Wear down durable enemies.", "pierce": "Aim through a line of enemies.", "split": "Spread into nearby enemies.", "bounce": "Use walls for another pass.", "chain": "Connect clustered enemies.", "explode": "Strike tightly packed groups.", "cooldown": "Spend mana faster for rapid casts."}.get(id, "Recover before the next trial.")
+
+func edit_draft(action: String, index: int = -1, id: String = "") -> void:
+    if state != "reward" or not selected_reward:
+        return
+    match action:
+        "remove":
+            if index > 0 and index < draft.size():
+                draft.remove_at(index)
+        "left", "right":
+            var destination := index + (-1 if action == "left" else 1)
+            if index > 0 and index < draft.size() and destination > 0 and destination < draft.size():
+                var previous = draft[index]
+                draft[index] = draft[destination]
+                draft[destination] = previous
+        "add":
+            if owned.has(id) and not draft.has(id) and draft.size() < 5:
+                draft.append(id)
+    show_reward()
+
 func show_reward() -> void:
     clear_panel()
-    label_text("TRIAL %d CLEARED · +15 health" % (encounter_index + 1), 25)
+    label_text("TRIAL %d CLEARED · +15 health" % (encounter_index + 1), 24)
     var catalog: Dictionary = Spell.catalog()
     if not selected_reward:
-        label_text("Choose one component to keep this run")
+        label_text("Choose one component to own this run", 17)
+        var cards := HBoxContainer.new()
+        cards.add_theme_constant_override("separation", 10)
+        content.add_child(cards)
         for id in offers:
-            if id == "restore":
-                button("Restore 25 extra health", func(): choose_reward(id))
-            else:
-                button(str(catalog[id].name), func(): choose_reward(id), str(catalog[id].description) + " · Mana +%s" % catalog[id].cost)
+            var card := Button.new()
+            card.custom_minimum_size = Vector2(245, 190)
+            card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            card.text = "+  RESTORE\n\nRecover 25 extra health.\n\nPrepare for the next fight." if id == "restore" else "%s  %s\n\n%s\n\nMana +%d · %s" % [component_icon(id), catalog[id].name, catalog[id].description, catalog[id].cost, component_use(id)]
+            card.pressed.connect(func(): choose_reward(id))
+            cards.add_child(card)
+        label_text("Five slots full? Your reward stays owned. Remove a slot to equip it." if draft.size() == 5 else "Your reward is equipped automatically when a slot is free.", 15)
         return
-    label_text("Click a slot to remove; add below in order", 16)
+    label_text("SPELL FORGE · ordered slots · Projectile is fixed", 16)
     var slots := HBoxContainer.new()
+    slots.add_theme_constant_override("separation", 5)
     content.add_child(slots)
-    for i in draft.size():
-        var item := Button.new()
-        item.text = "%d %s" % [i + 1, str(catalog[draft[i]].name)]
-        item.disabled = i == 0
-        item.tooltip_text = str(catalog[draft[i]].description) + " · Remove and re-add to reorder."
-        item.pressed.connect(func(): draft.remove_at(i); show_reward())
-        slots.add_child(item)
+    for i in 5:
+        var slot := VBoxContainer.new()
+        slot.custom_minimum_size.x = 142
+        slots.add_child(slot)
+        var title := Button.new()
+        title.text = "%d  %s %s" % [i + 1, component_icon(draft[i]), catalog[draft[i]].name] if i < draft.size() else "%d  — Empty —" % (i + 1)
+        title.add_theme_font_size_override("font_size", 16)
+        title.disabled = i >= draft.size()
+        if i < draft.size():
+            title.pressed.connect(func(): selected_component = draft[i]; show_reward())
+        slot.add_child(title)
+        var controls := HBoxContainer.new()
+        slot.add_child(controls)
+        for action in ["left", "right", "remove"]:
+            var item := Button.new()
+            item.text = {"left": "←", "right": "→", "remove": "Remove"}[action]
+            item.add_theme_font_size_override("font_size", 13)
+            item.disabled = i == 0 or i >= draft.size() or (action == "left" and i == 1) or (action == "right" and i == draft.size() - 1)
+            item.pressed.connect(func(): edit_draft(action, i))
+            controls.add_child(item)
     var row := HBoxContainer.new()
     content.add_child(row)
     for id in owned:
         if id == "projectile":
             continue
         var item := Button.new()
-        item.text = str(catalog[id].name)
+        item.add_theme_font_size_override("font_size", 13)
+        item.text = ("✓ " if draft.has(id) else "+ ") + str(catalog[id].name)
         item.disabled = draft.has(id) or draft.size() >= 5
-        item.tooltip_text = str(catalog[id].description) + " · Mana +%s" % catalog[id].cost
-        item.pressed.connect(func(): draft.append(id); show_reward())
+        item.tooltip_text = ("Equipped. " if draft.has(id) else "Owned; remove a slot to equip. " if draft.size() >= 5 else "Owned; add to next empty slot. ") + str(catalog[id].description)
+        item.pressed.connect(func(): edit_draft("add", -1, id))
         row.add_child(item)
     var preview: Dictionary = Spell.compile(draft)
-    label_text("Mana %s / 100 · Cast delay %.2fs · Slots %d / 5" % [preview.get("mana_cost", 0), preview.get("cooldown", 0), draft.size()] if preview.valid else str(preview.error), 16)
-    button("Enter the Warden's chamber" if encounter_index == 5 else "Enter next trial", apply_reward).disabled = not preview.valid
+    label_text("Mana %d / 100 · Cast delay %.2fs · Slots %d / 5 · ✓ equipped / + owned" % [preview.get("mana_cost", 0), preview.get("cooldown", 0), draft.size()], 15)
+    var explanation := label_text("%s: %s %s" % [catalog[selected_component].name, catalog[selected_component].description, component_use(selected_component)], 14)
+    explanation.tooltip_text = "Impact triggers resolve left → right. Child bolts cannot trigger Split, Chain or Explode. Select a slot to inspect its effect."
+    explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    var test_area := preload("res://scripts/spell_preview.gd").new()
+    test_area.name = "SpellPreview"
+    test_area.custom_minimum_size = Vector2(740, 76)
+    test_area.source = self
+    content.add_child(test_area)
+    var actions := HBoxContainer.new()
+    content.add_child(actions)
+    var test_button := Button.new()
+    test_button.text = "Test group ↻"
+    test_button.pressed.connect(func(): test_area.restart("group"))
+    actions.add_child(test_button)
+    var wall_button := Button.new()
+    wall_button.text = "Wall shot ↻"
+    wall_button.tooltip_text = "Fire toward a wall to test Bounce. Targets wait behind you."
+    wall_button.pressed.connect(func(): test_area.restart("wall"))
+    actions.add_child(wall_button)
+    var enter := Button.new()
+    enter.text = "Enter the Warden's chamber →" if encounter_index == 5 else "Enter next trial →"
+    enter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    enter.modulate = Art.TEAL
+    enter.disabled = not preview.valid
+    enter.pressed.connect(apply_reward)
+    actions.add_child(enter)
 
 func apply_reward() -> void:
     if state != "reward" or not selected_reward:
@@ -583,7 +671,28 @@ func finish_run(won: bool) -> void:
     effects.clear()
     clear_panel()
     label_text("WARDEN DEFEATED" if won else "YOUR RUN ENDS", 32)
-    label_text("Seed %d · %d defeated · %d:%02d\n%s" % [run_seed, kills, int(elapsed) / 60, int(elapsed) % 60, " → ".join(components)], 18)
+    label_text("%d / 6 trials cleared · %d enemies defeated" % [mini(encounter_index, 6), kills], 20)
+    label_text("Combat time %d:%02d · Seed %d" % [int(elapsed) / 60, int(elapsed) % 60, run_seed], 17)
+    label_text("FINAL SPELL", 16)
+    var tiles := HBoxContainer.new()
+    tiles.alignment = BoxContainer.ALIGNMENT_CENTER
+    tiles.add_theme_constant_override("separation", 8)
+    content.add_child(tiles)
+    for id in components:
+        var tile := Label.new()
+        tile.text = "%s %s" % [component_icon(id), Spell.catalog()[id].name]
+        tile.add_theme_color_override("font_color", Art.GOLD)
+        tile.add_theme_font_size_override("font_size", 18)
+        var cell := PanelContainer.new()
+        var tile_style := StyleBoxFlat.new()
+        tile_style.bg_color = Art.STONE
+        tile_style.content_margin_left = 10
+        tile_style.content_margin_right = 10
+        tile_style.content_margin_top = 8
+        tile_style.content_margin_bottom = 8
+        cell.add_theme_stylebox_override("panel", tile_style)
+        cell.add_child(tile)
+        tiles.add_child(cell)
     button("Retry this seed", func(): start_run(run_seed))
     button("New run", func(): start_run(int(Time.get_unix_time_from_system())))
     button("Main menu", show_menu)
@@ -644,10 +753,11 @@ func load_settings() -> void:
 
 func update_hud() -> void:
     hud.visible = state in ["menu", "combat", "paused"]
-    if state == "menu":
-        hud.text = "SPELLFORGE / THE RUNIC TRIALS"
-    else:
-        hud.text = "HP %d / 100    MANA %d / 100    %s    SEED %d\n%s" % [int(hp), int(mana), "WARDEN" if encounter_index == 6 else "TRIAL %d / 6" % (encounter_index + 1), run_seed, message if message_time > 0 else " · ".join(components) + "     [Esc] pause"]
+    hud.queue_redraw()
+
+func readiness() -> Dictionary:
+    return {"cast": cooldown <= 0 and mana >= float(compiled.get("mana_cost", 8)) and projectiles.size() < MAX_PROJECTILES,
+        "dodge": dodge_cooldown <= 0}
 
 func _draw() -> void:
     var shake := Vector2.ZERO
