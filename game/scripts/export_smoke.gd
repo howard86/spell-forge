@@ -13,7 +13,7 @@ func run(game: Node) -> void:
     check(Engine.get_version_info().string.begins_with("4.7.2"), "packaged engine version")
     check(game.state == "menu", "packaged main scene starts")
     check(game.settings.master == 0.7, "smoke uses isolated default settings")
-    var license := FileAccess.get_file_as_string("res://assets/LICENSE.txt")
+    var license := FileAccess.get_file_as_string("res://assets/LICENSE.txt").replace("\r\n", "\n")
     check(license.begins_with("MIT License") and license.contains('THE SOFTWARE IS PROVIDED "AS IS"'), "packaged license")
     game.show_credits()
     var credits_found := false

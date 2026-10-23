@@ -35,7 +35,7 @@ func run() -> void:
             child.pressed.emit()
             break
     check(scene.state == "credits", "credits menu opens")
-    var project_license := FileAccess.get_file_as_string("res://assets/LICENSE.txt")
+    var project_license := FileAccess.get_file_as_string("res://assets/LICENSE.txt").replace("\r\n", "\n")
     check(project_license.begins_with("MIT License") and project_license.contains("Copyright (c) 2026 Spellforge contributors") and project_license.contains('THE SOFTWARE IS PROVIDED "AS IS"'), "packaged project MIT notice is readable and complete")
     var found_project_license := false
     var found_license := false
