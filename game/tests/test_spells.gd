@@ -20,7 +20,119 @@ func count_type(events: Array, kind: String) -> int:
 			total += 1
 	return total
 
+func test_upgrade_compilation() -> void:
+	var entries: Dictionary = EngineRules.catalog()
+	for row in [{"id": "frost", "cost": 5.0}, {"id": "wall_charge", "cost": 4.0}, {"id": "delayed_blast", "cost": 3.0}]:
+		check(entries.has(row.id) and entries[row.id].cost == row.cost, "Upgrade price: %s" % row.id)
+	for row in [
+		{"components": ["projectile", "frost"], "cost": 13.0},
+		{"components": ["projectile", "bounce", "wall_charge"], "cost": 16.0},
+		{"components": ["projectile", "wall_charge", "bounce"], "cost": 16.0},
+		{"components": ["projectile", "explode", "delayed_blast"], "cost": 19.0},
+		{"components": ["projectile", "delayed_blast", "explode"], "cost": 19.0},
+		{"components": ["projectile", "wall_charge", "delayed_blast", "explode", "bounce"], "cost": 27.0},
+	]:
+		var compiled: Dictionary = EngineRules.compile(row.components)
+		check(compiled.valid and is_equal_approx(compiled.mana_cost, row.cost), "Upgrade build pricing: %s" % str(row.components))
+		check(compiled.damage == 18.0, "Upgrades preserve base damage")
+		for component in ["frost", "wall_charge", "delayed_blast"]:
+			check(compiled[component] == row.components.has(component), "Explicit upgrade flag: %s" % component)
+	for components in [
+		["projectile", "wall_charge"], ["projectile", "delayed_blast"],
+		["projectile", "wall_charge", "explode"], ["projectile", "delayed_blast", "bounce"],
+		["projectile", "frost", "frost"],
+		["projectile", "bounce", "wall_charge", "frost", "explode", "delayed_blast"],
+	]:
+		var invalid: Dictionary = EngineRules.compile(components)
+		check(not invalid.valid and not invalid.error.is_empty(), "Invalid upgrade build rejected: %s" % str(components))
+	var plain: Dictionary = EngineRules.compile(["projectile"])
+	check(not plain.frost and not plain.wall_charge and not plain.delayed_blast, "Old builds default upgrades off")
+
+func test_upgrade_impacts() -> void:
+	# Direct penalties apply to children too, but only a root direct hit carries slow.
+	for row in [
+		{"components": ["projectile"], "charged": false, "amount": 18.0},
+		{"components": ["projectile", "frost", "fire"], "charged": false, "amount": 15.3},
+		{"components": ["projectile", "wall_charge", "bounce"], "charged": false, "amount": 15.3},
+		{"components": ["projectile", "wall_charge", "bounce"], "charged": true, "amount": 27.0},
+		{"components": ["projectile", "frost", "wall_charge", "bounce", "fire"], "charged": false, "amount": 13.005},
+		{"components": ["projectile", "frost", "wall_charge", "bounce", "fire"], "charged": true, "amount": 22.95},
+	]:
+		for generation in [0, 1]:
+			var compiled: Dictionary = EngineRules.compile(row.components)
+			var projectile := bolt(generation)
+			projectile.wall_charged = row.charged
+			var events: Array = EngineRules.resolve_hit(EngineRules.new_cast(20, compiled), projectile, 1, [])
+			check(events.size() == 1 and is_equal_approx(events[0].amount, row.amount), "Direct damage factors: %s, generation %d" % [str(row.components), generation])
+			check(events[0].frost == (compiled.frost and generation == 0), "Frost marks root contacts only")
+			check(events[0].burn == compiled.fire, "Direct penalties preserve burn inheritance")
+	var charge_spell: Dictionary = EngineRules.compile(["projectile", "bounce", "wall_charge"])
+	var charge_cast: Dictionary = EngineRules.new_cast(21, charge_spell)
+	var projectile := bolt()
+	projectile.bounces = 3
+	check(not projectile.get("wall_charged", false), "Missing wall charge state defaults uncharged")
+	check(is_equal_approx(EngineRules.resolve_hit(charge_cast, projectile, 1, [])[0].amount, 15.3), "Unreflected projectile pays damage penalty")
+	for index in range(3):
+		check(EngineRules.consume_bounce(projectile) and projectile.wall_charged, "Successful reflection enables charge")
+		var events: Array = EngineRules.resolve_hit(charge_cast, projectile, index + 2, [])
+		check(events.size() == 1 and events[0].amount == 27.0, "Repeated reflections never compound charge")
+	check(not EngineRules.consume_bounce(projectile) and projectile.wall_charged, "Exhausted bounce retains earlier charge")
+	for remaining in [0, -1]:
+		var denied := {"bounces": remaining}
+		check(not EngineRules.consume_bounce(denied) and not denied.get("wall_charged", false) and denied.bounces == remaining, "Failed reflection never grants charge")
+	# Secondary event damage remains based on the unchanged base stat.
+	var secondary: Dictionary = EngineRules.compile(["projectile", "frost", "chain", "explode", "fire"])
+	var secondary_events: Array = EngineRules.resolve_hit(EngineRules.new_cast(22, secondary), bolt(), 1, [{"id": 2, "position": Vector2(20, 0)}])
+	check(secondary_events[1].type == "chain" and is_equal_approx(secondary_events[1].amount, 11.7) and secondary_events[1].burn and not secondary_events[1].get("frost", false), "Frost changes neither chain damage nor its burn and never slows via chain")
+	check(secondary_events[2].type == "explode" and secondary_events[2].damage == 13.5 and not secondary_events[2].get("frost", false), "Frost does not amplify or propagate via explosions")
+	var wall_secondary: Dictionary = EngineRules.compile(["projectile", "bounce", "wall_charge", "chain", "explode"])
+	for charged in [false, true]:
+		var wall_bolt := bolt()
+		wall_bolt.wall_charged = charged
+		var events: Array = EngineRules.resolve_hit(EngineRules.new_cast(23, wall_secondary), wall_bolt, 1, [{"id": 2, "position": Vector2(20, 0)}])
+		check(is_equal_approx(events[1].amount, 11.7) and events[2].damage == 13.5, "Wall Charge never changes chain or explosion damage")
+
+func test_delayed_blast() -> void:
+	var compiled: Dictionary = EngineRules.compile(["projectile", "pierce", "delayed_blast", "explode", "frost"])
+	var cast: Dictionary = EngineRules.new_cast(24, compiled)
+	var root := bolt()
+	root.position = Vector2(37, 48)
+	var first: Array = EngineRules.resolve_hit(cast, root, 1, [])
+	check(count_type(first, "delayed_explode") == 1 and count_type(first, "explode") == 0, "Delayed Blast replaces immediate explosion")
+	var blast: Dictionary = first[1]
+	check(blast.position == Vector2(37, 48) and blast.radius == 72.0 and blast.damage == 20.25 and blast.delay == 0.6, "Delayed Blast snapshots fixed position, radius, unpenalized damage and delay")
+	check(cast.effects_used == 2 and cast.delayed_blast_used and root.exploded, "Delayed Blast reserves exactly one effect and records success")
+	check(not blast.has("burn") and not blast.has("frost"), "Delayed area event carries no status procs")
+	check(EngineRules.resolve_hit(cast, root, 1, []).is_empty(), "Repeated delayed contact is deduplicated")
+	check(EngineRules.resolve_hit(cast, root, 2, []).size() == 1, "Piercing root never repeats delayed blast")
+	check(EngineRules.resolve_hit(cast, bolt(), 3, []).size() == 1, "A second root cannot repeat a cast's delayed blast")
+	check(EngineRules.resolve_hit(cast, bolt(1), 4, []).size() == 1, "Child cannot trigger delayed blast")
+	root.position = Vector2(90, 90)
+	check(blast.position == Vector2(37, 48), "Queued event position survives later projectile movement")
+	var separate: Array = EngineRules.resolve_hit(EngineRules.new_cast(25, compiled), bolt(), 1, [])
+	check(count_type(separate, "delayed_explode") == 1, "New cast has a fresh delayed allowance")
+	var denied: Dictionary = EngineRules.new_cast(26, compiled)
+	denied.effects_used = EngineRules.MAX_EFFECTS - 1
+	var denied_bolt := bolt()
+	var denied_events: Array = EngineRules.resolve_hit(denied, denied_bolt, 1, [])
+	check(denied_events.size() == 1 and denied.effects_used == 64 and denied.exhausted, "Delayed Blast cannot exceed effect cap")
+	check(not denied.delayed_blast_used and not denied_bolt.get("exploded", false), "Denied delayed reservation leaves trigger unused")
+	var exact: Dictionary = EngineRules.new_cast(27, compiled)
+	exact.effects_used = EngineRules.MAX_EFFECTS - 2
+	check(count_type(EngineRules.resolve_hit(exact, bolt(), 1, []), "delayed_explode") == 1 and exact.effects_used == 64, "Delayed Blast fits exact remaining budget")
+	for row in [
+		{"components": ["projectile", "split", "explode", "delayed_blast"], "splits": 2, "blasts": 0, "used": 64},
+		{"components": ["projectile", "delayed_blast", "explode", "split"], "splits": 0, "blasts": 1, "used": 63},
+	]:
+		var ordered: Dictionary = EngineRules.new_cast(28, EngineRules.compile(row.components))
+		ordered.effects_used = 61
+		var events: Array = EngineRules.resolve_hit(ordered, bolt(), 1, [])
+		check(count_type(events, "split") == row.splits and count_type(events, "delayed_explode") == row.blasts and ordered.effects_used == row.used, "Delayed replacement preserves slot-ordered budget semantics")
+
 func _initialize() -> void:
+	test_upgrade_compilation()
+	test_upgrade_impacts()
+	test_delayed_blast()
 	for invalid in [[], ["fire"], ["projectile", "projectile"], ["projectile", "unknown"], ["projectile", 2], ["projectile", "fire", "pierce", "split", "chain", "explode"]]:
 		var result: Dictionary = EngineRules.compile(invalid)
 		check(not result.valid and not result.error.is_empty(), "Invalid build accepted: %s" % str(invalid))

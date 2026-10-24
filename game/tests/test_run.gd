@@ -19,9 +19,9 @@ func run() -> void:
     for index in 7:
         check(Director.encounter(42, index) == Director.encounter(42, index), "repeatable encounter")
     check(Director.rewards(42, 0, ["projectile"]) == Director.rewards(42, 0, ["projectile"]), "repeatable rewards")
-    check(Director.rewards(42, 0, ["projectile", "fire", "pierce", "split", "bounce", "chain", "explode", "cooldown"]) == ["restore"], "exhausted rewards fallback")
+    check(Director.rewards(42, 0, game.Spell.catalog().keys()) == ["restore"], "exhausted rewards fallback")
     game.start_run(42)
-    check(game.state == "combat" and game.enemies.size() == 4, "start encounter")
+    check(game.state == "combat" and game.enemies.size() == 1, "start encounter")
     game.update_hud()
     check(game.hud.visible, "combat HUD visible")
     game.choose_reward("fire")
@@ -55,16 +55,20 @@ func run() -> void:
             game.enemies[0].hp = 400
             game.update_enemies(0.01)
             check(game.enemies[0].phase == 2, "boss phase transition")
-        for enemy in game.enemies:
-            while enemy.hp > 0:
-                game.cooldown = 0
-                game.mana = 100
-                game.aim = Vector2.RIGHT
-                game.cast_spell()
-                var bolt: Dictionary = game.projectiles.back()
-                bolt.position = enemy.position
-                game.resolve_projectile_hit(bolt, enemy)
-        game.simulate(0.001)
+        for wave in 3:
+            for enemy in game.enemies:
+                while enemy.hp > 0:
+                    game.cooldown = 0
+                    game.mana = 100
+                    game.aim = Vector2.RIGHT
+                    game.cast_spell()
+                    var bolt: Dictionary = game.projectiles.back()
+                    bolt.position = enemy.position
+                    game.resolve_projectile_hit(bolt, enemy)
+            game.simulate(0.001)
+            if game.state != "combat":
+                break
+            game.update_spawns(1.01)
         if index < 6:
             check(game.state == "reward", "combat to reward")
             if index == 0:

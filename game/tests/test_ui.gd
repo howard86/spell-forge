@@ -123,6 +123,62 @@ func run() -> void:
     scene.panel.hide()
     check(not preview.is_processing(), "hidden preview stops processing")
     scene.draft = saved_draft
+    scene.panel.show()
+    scene.owned = ["projectile", "bounce", "wall_charge", "explode", "delayed_blast", "frost", "cooldown"]
+    scene.draft = ["projectile", "bounce", "wall_charge", "explode", "delayed_blast"]
+    scene.selected_component = "delayed_blast"
+    scene.selected_reward = true
+    scene.show_reward()
+    await settle()
+    visible_bounds(scene.panel)
+    check(find_button(scene.panel, "3  ").text.contains("Wall Charge") and find_button(scene.panel, "5  ").text.contains("Delayed Blast"), "long component names remain visible in slots")
+    var bounce_remove: Button = find_button(scene.panel, "2  ").get_parent().get_child(1).get_child(2)
+    check(bounce_remove.disabled and bounce_remove.tooltip_text.contains("Wall Charge"), "required Bounce removal disabled with explanation")
+    var explode_remove: Button = find_button(scene.panel, "4  ").get_parent().get_child(1).get_child(2)
+    check(explode_remove.disabled and explode_remove.tooltip_text.contains("Delayed Blast"), "required Explode removal disabled with explanation")
+    scene.draft = ["projectile"]
+    scene.show_reward()
+    await settle()
+    visible_bounds(scene.panel)
+    check(find_button(scene.panel, "+ Wall Charge").disabled and find_button(scene.panel, "+ Wall Charge").tooltip_text.contains("Bounce"), "Wall Charge add explains missing Bounce")
+    check(find_button(scene.panel, "+ Delayed Blast").disabled and find_button(scene.panel, "+ Delayed Blast").tooltip_text.contains("Explode"), "Delayed Blast add explains missing Explode")
+    for offer_set in [["frost", "wall_charge", "restore"], ["delayed_blast", "frost", "restore"]]:
+        scene.offers = offer_set
+        scene.selected_reward = false
+        scene.show_reward()
+        await settle()
+        visible_bounds(scene.panel)
+        check(labels(scene.panel).contains("Recover 0 health now") and labels(scene.panel).contains("Already at full health"), "Restore card explicitly reports zero benefit at full health")
+        for id in offer_set:
+            check(find_button(scene.panel, "+  RESTORE" if id == "restore" else scene.component_icon(id)) != null, "new reward card visible: " + id)
+    scene.selected_reward = true
+    scene.draft = ["projectile", "explode", "delayed_blast"]
+    scene.show_reward()
+    preview = scene.content.get_node("SpellPreview")
+    preview.restart("group")
+    var first_blast := -1
+    for i in preview.frames.size():
+        if not preview.frames[i].blasts.is_empty():
+            first_blast = i
+            break
+    check(first_blast >= 0, "preview records delayed blast warning")
+    for preview_width in [740.0, 800.0]:
+        preview.size.x = preview_width
+        var blast_origin := Vector2(440, 300)
+        var boundary: PackedVector2Array = preview.blast_boundary(blast_origin, 72.0)
+        check(boundary.size() == 33 and boundary[0].is_equal_approx(boundary[-1]), "blast ellipse is a closed mapped boundary")
+        check(boundary[0].is_equal_approx(preview.point(blast_origin + Vector2(72, 0))) and boundary[16].is_equal_approx(preview.point(blast_origin - Vector2(72, 0))), "preview blast horizontal edge matches target coordinate scale")
+        check(boundary[8].is_equal_approx(preview.point(blast_origin + Vector2(0, 72))) and boundary[24].is_equal_approx(preview.point(blast_origin - Vector2(0, 72))), "preview blast vertical edge matches target coordinate scale")
+    if first_blast >= 0:
+        check(is_equal_approx(preview.frames[first_blast].enemies[0].hp, 82), "preview delays explosion damage at impact")
+        check(preview.frames[-1].enemies[0].hp < 82 and preview.frames[-1].blasts.is_empty(), "preview resolves delayed damage after warning")
+    scene.draft = ["projectile", "bounce", "wall_charge"]
+    preview.restart("wall")
+    check(is_equal_approx(preview.frames[-1].enemies[0].hp, 73), "Wall Charge preview bank shot deals actual 27 damage")
+    scene.draft = ["projectile", "frost"]
+    preview.restart("group")
+    check(is_equal_approx(preview.frames[-1].enemies[0].hp, 84.7), "Frost preview reflects reduced direct damage")
+    scene.draft = saved_draft
     scene.encounter_index = 5
     check(scene.hud.progression().cleared == 5, "five trials cleared before sixth")
     scene.apply_reward()

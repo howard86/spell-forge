@@ -20,8 +20,8 @@ Spellforge is a real-time, top-down pixel-art roguelite in which players build a
 | Core play | Move, aim, dodge, cast; combat in discrete arenas |
 | Run | Six encounters followed by one boss |
 | Player | One wizard, one active spell |
-| Spell crafting | Ordered-slot editor; eight components |
-| Enemies | Five normal archetypes; one boss |
+| Spell crafting | Ordered-slot editor; eleven components |
+| Enemies | Six normal archetypes; one boss |
 | Level | One visual biome; small curated arena pool with randomized sequences |
 | Progression | Between-encounter component rewards; no permanent power tree |
 | Meta | Menu, settings, run summary, restart |
@@ -56,7 +56,7 @@ Multiplayer, controller support, procedural open-world layouts, skill trees, onl
 5. **Channeler:** Wind-up area hazard; rewards interrupts or speed.
 6. **Boss — Runebound Warden:** Multiple clearly telegraphed attacks and at least one phase transition.
 
-These are gameplay roles, not committed art or lore.
+The implemented balance expansion adds a sixth normal role, the Lane Archer, with a predicted lane that locks before firing. See [ADR 0002](decisions/0002-encounter-balance.md) for staged encounters and the current upgrade rules. These are gameplay roles, not committed art or lore.
 
 ## Content design constraints
 - Curated reusable arena layouts, with randomized enemy/reward combinations.
