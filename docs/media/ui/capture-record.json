@@ -1,0 +1,41 @@
+{
+  "capture_date": "2026-10-23",
+  "record_date": "2026-10-23",
+  "timezone": "Asia/Taipei",
+  "type": "controlled UI fixtures",
+  "limitations": [
+    "Not normal gameplay captures",
+    "Not a human playtest",
+    "Not marketing approval",
+    "Windows execution not performed"
+  ],
+  "engine": "Godot 4.7.2 stable official ed1daf0bf",
+  "base_commit": "18711266c5117affd5e77297b6d5bea9d66887cc",
+  "capture_script": "game/tests/capture_ui.gd",
+  "logical_viewport": {
+    "width": 960,
+    "height": 540
+  },
+  "image_size": {
+    "width": 1280,
+    "height": 720
+  },
+  "command": "godot --path game --script res://tests/capture_ui.gd -- /absolute/output-directory 1280x720",
+  "script_sha256": {
+    "game/scripts/game.gd": "260cbcee691dbabcc90fc2f578ebbbe8e35a732a1b7f8c92bd2ec6da8aa8fad1",
+    "game/scripts/presentation.gd": "3c7594c4771b02bbe263d76c599cb30550199f4fb0e40663bcc4399177b89c5a",
+    "game/scripts/combat_hud.gd": "0380d7da2152ba7913b6a6def7066d9ee0ca9a0e99fe68177996be7bb174a4a1",
+    "game/scripts/spell_preview.gd": "b36c027bee4472f334e0ed585ffe361e460dce984724fe7093140ac944556019",
+    "game/scripts/spell_engine.gd": "e183e05d1c890616e27d19d5374a29d37c988cb779739e5b3021b8b0afeb3da7",
+    "game/scripts/run_director.gd": "6d347742ac386c06c867d46f0b8a2c9a5aea41f35e802c723ede11d2c3fcb58b",
+    "game/tests/capture_ui.gd": "fcc65515b4d9a98eace7da86e5701a9fea85f770bc3d7be780b4f7eb94779039"
+  },
+  "screenshot_sha256": {
+    "combat.png": "41e16fb9693a40dd3d4aac642627dc34203aa143cfb153ec4d8bed45c4f6ef8c",
+    "boss-low-mana.png": "eccf644d397122015df0dfd76b4df5d3e5167ee11f874b1914c3714c0343ff34",
+    "enemy-cues.png": "7c76b3f2cd65dc485c87adce255cfa6e20e8b3731b63eb6c08e894c6109803a1",
+    "rewards.png": "4b647d79b48e105088bf0c602bc0f1329f74a2d4cae93e8328e4c1a8737be9e3",
+    "forge-full.png": "2d8b19f0387ad7ed565d82c07cfd641f02ae77add009a4226eba8802c41d304e",
+    "victory.png": "5f235ad72b79dd22cc89dfe0f119998265a5bfcce12314250e23eabbc0cef0e8"
+  }
+}

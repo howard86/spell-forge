@@ -80,7 +80,7 @@ func run() -> void:
                 game.message_time = 1.0
             game.apply_reward()
             if index == 0:
-                check(game.message.is_empty() and game.message_time == 0, "new encounter clears prior combat warnings")
+                check(game.message == "TRIAL 2 / 6 · clear every enemy" and game.message_time > 0 and game.resource_notice.is_empty(), "new encounter replaces prior warnings with encounter intro")
     check(game.state == "victory", "boss victory summary")
     game.update_hud()
     check(not game.hud.visible, "victory screen hides combat warnings and pause hint")
@@ -237,7 +237,7 @@ func run() -> void:
         check(game.state == "death" and game.kills == 0, "death stops later projectile damage: " + death_source)
         var summary_found := false
         for child in game.content.get_children():
-            if child is Label and child.text.contains("0 defeated"):
+            if child is Label and child.text.contains("0 enemies defeated"):
                 summary_found = true
         check(summary_found, "death summary matches final kill count")
     var original: Dictionary = game.settings.duplicate()
