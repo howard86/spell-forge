@@ -12,7 +12,7 @@ jobs:
     container:
       image: barichello/godot-ci:4.7.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify engine version
         run: godot --version | grep -E '^4\.7\.2\.stable\.'
       - name: Verify packaged project license matches repository license
@@ -51,7 +51,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Download the exported game
         uses: actions/download-artifact@v4
         with:
