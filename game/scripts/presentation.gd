@@ -20,7 +20,7 @@ static func _box(c: Node2D, p: Vector2, x: float, y: float, w: float, h: float, 
 static func _diamond(c: Node2D, p: Vector2, r: float, color: Color) -> void:
     c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)]), color)
 
-static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: float, progress: float, color: Color) -> void:
+static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: float, progress: float, color: Color, blocks: Array = []) -> void:
     # Capsule boundaries match distance-to-segment damage, including both end caps.
     var width := maxf(half_width, 0.0)
     var direction := origin.direction_to(target)
@@ -29,6 +29,20 @@ static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: 
     var normal := direction.orthogonal()
     var side := normal * width
     var fill := Color(color, 0.12)
+    if not blocks.is_empty():
+        var boundary := Geometry.lane_boundary(origin, target, width, RADIAL_ARENA, blocks)
+        if boundary.size() < 4:
+            return
+        c.draw_colored_polygon(boundary.slice(0, boundary.size() - 1), fill)
+        c.draw_polyline(boundary, color, 2)
+        var front := origin.lerp(target, clampf(progress, 0, 1))
+        _draw_lane_detail(c, front - side, front + side, Color("fff0c7"), 3, boundary)
+        var length := origin.distance_to(target)
+        for i in range(1, int(length / 42.0) + 1):
+            var point := origin + direction * minf(i * 42.0, length)
+            _draw_lane_detail(c, point - direction * 7 + normal * 4, point, color, 1, boundary)
+            _draw_lane_detail(c, point - direction * 7 - normal * 4, point, color, 1, boundary)
+        return
     if origin.distance_squared_to(target) > 0.001:
         c.draw_colored_polygon(PackedVector2Array([origin + side, target + side, target - side, origin - side]), fill)
     c.draw_circle(origin, width, fill)
@@ -45,6 +59,10 @@ static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: 
         var point := origin + direction * minf(i * 42.0, length)
         c.draw_line(point - direction * 7 + normal * 4, point, color, 1)
         c.draw_line(point - direction * 7 - normal * 4, point, color, 1)
+
+static func _draw_lane_detail(c: Node2D, start: Vector2, finish: Vector2, color: Color, width: float, boundary: PackedVector2Array) -> void:
+    for line: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(PackedVector2Array([start, finish]), boundary):
+        c.draw_polyline(line, color, width)
 
 static func _draw_countdown(c: Node2D, position: Vector2, radius: float, progress: float, color: Color) -> void:
     c.draw_arc(position, radius, 0, TAU, 48, color, 2)
@@ -189,7 +207,7 @@ static func draw_enemy(c: Node2D, enemy: Dictionary, time: float, blocks: Array 
             var duration := maxf(float(enemy.get("warning_duration", 0.9)), 0.001)
             var progress := 1.0 - clampf(float(enemy.get("telegraph", 0.0)) / duration, 0, 1)
             var default_width := r if attack_kind == "charge" else (30.0 if attack_kind == "sweep" else 16.0)
-            _draw_lane(c, origin, target, float(enemy.get("attack_width", default_width)), progress, GOLD if attack_kind == "charge" else RED)
+            _draw_lane(c, origin, target, float(enemy.get("attack_width", default_width)), progress, GOLD if attack_kind == "charge" else RED, blocks)
         else:
             if kind in ["pursuer", "swarm", "bulwark"]:
                 var tip: Vector2 = enemy.get("attack_target", p + facing * (45 if kind == "bulwark" else 68))
@@ -338,7 +356,7 @@ static func draw_hazard(c: Node2D, hazard: Dictionary, _time: float, blocks: Arr
     if hazard.get("kind", "circle") == "lane":
         var origin: Vector2 = hazard.get("origin", Vector2.ZERO)
         var target: Vector2 = hazard.get("target", origin)
-        _draw_lane(c, origin, target, float(hazard.get("width", 16.0)), float(hazard.get("progress", 0.0)), RED)
+        _draw_lane(c, origin, target, float(hazard.get("width", 16.0)), float(hazard.get("progress", 0.0)), RED, blocks)
         return
     var p: Vector2 = hazard.position
     var r: float = hazard.radius

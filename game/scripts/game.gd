@@ -570,7 +570,10 @@ func cast_spell() -> bool:
     cooldown = compiled.cooldown
     cast_id += 1
     casts[cast_id] = Spell.new_cast(cast_id, compiled.duplicate(true))
-    add_projectile(player_pos + aim * 18, aim, false, cast_id, 0)
+    # The muzzle offset is travel too: stop at its first contact instead of
+    # projecting a point past a rounded corner. Normal collision handles it next tick.
+    var muzzle := Geometry.sweep(player_pos, player_pos + aim * 18, 5, ARENA.grow(5), obstacles)
+    add_projectile(muzzle.position, aim, false, cast_id, 0)
     audio.play_sfx("cast")
     return true
 
@@ -798,7 +801,7 @@ func update_projectiles(delta: float) -> void:
             projectile.position = destination
             if wall.hit:
                 if Spell.consume_bounce(projectile):
-                    projectile.direction = projectile.direction.bounce(wall.normal).normalized()
+                    projectile.direction = Geometry.reflect(projectile.direction, wall).normalized()
                 else:
                     consumed = true
         projectile.life = 0.0 if consumed else maxf(0.0, projectile.life - delta)
@@ -835,7 +838,7 @@ func resolve_projectile_hit(projectile: Dictionary, enemy: Dictionary) -> void:
             targets.append({"id": candidate.id, "position": candidate.position})
     if not casts.has(projectile.cast_id):
         return
-    var events: Array = Spell.resolve_hit(casts[projectile.cast_id], projectile, enemy.id, targets)
+    var events: Array = Spell.resolve_hit(casts[projectile.cast_id], projectile, enemy.id, targets, clear_segment)
     if not projectile.hit_ids.has(enemy.id):
         projectile.hit_ids.append(enemy.id)
     # World capacity rejects the entire reserved Split pair; never emit half a pair.
@@ -843,20 +846,14 @@ func resolve_projectile_hit(projectile: Dictionary, enemy: Dictionary) -> void:
     var split_count := events.filter(func(event): return event.type == "split").size()
     var allow_split := projectiles.size() + split_count <= MAX_PROJECTILES
     var chain_origin: Vector2 = projectile.position
-    var chain_blocked := false
     for event in events:
         match event.type:
             "damage", "chain":
                 if event.type == "chain":
                     for target in enemies:
                         if target.id == event.target_id:
-                            if chain_blocked or not clear_segment(chain_origin, target.position):
-                                chain_blocked = true
-                                break
                             add_effect("chain", chain_origin, target.position, 0.0)
                             chain_origin = target.position
-                if event.type == "chain" and chain_blocked:
-                    continue
                 for target in enemies:
                     if target.id == event.target_id:
                         var amount := float(event.amount)
@@ -919,7 +916,7 @@ func update_hazards(delta: float) -> void:
         if state != "combat":
             return
         hazard.progress += delta / hazard.life
-        if hazard.progress >= 1 and (segment_contact(player_pos, float(hazard.width) + 11.0, hazard.origin, hazard.target) != INF if hazard.get("kind", "circle") == "lane" else player_pos.distance_to(hazard.position) < hazard.radius + 11 and clear_segment(hazard.position, player_pos)):
+        if hazard.progress >= 1 and (segment_contact(player_pos, float(hazard.width) + 11.0, hazard.origin, hazard.target) != INF and clear_segment(hazard.origin, player_pos) if hazard.get("kind", "circle") == "lane" else player_pos.distance_to(hazard.position) < hazard.radius + 11 and clear_segment(hazard.position, player_pos)):
             damage_player(22.0, str(hazard.get("source", "unknown")))
     hazards = hazards.filter(func(h): return h.progress < 1)
 

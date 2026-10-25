@@ -37,7 +37,12 @@ func check_sweeps() -> void:
 	hit = Geometry.sweep(Vector2(385, 391), Vector2(394, 391), 10, TEST_ARENA, BLOCKS)
 	check(not hit.hit, "Circle clears square expansion corner without a phantom collision")
 	hit = Geometry.sweep(Vector2(50, 50), Vector2(-50, -50), 10, TEST_ARENA, [])
-	near(hit.normal, Vector2.ONE.normalized(), "Simultaneous arena corner combines normals")
+	near(hit.normal, Vector2.ONE.normalized(), "Simultaneous arena corner combines movement normals")
+	hit = Geometry.sweep(Vector2(828, 454), Vector2(1028, 554), 5, ARENA.grow(5), [])
+	near(hit.position, Vector2(928, 504), "Unequal-direction projectile reaches simultaneous outer corner")
+	near(Geometry.reflect(Vector2(2, 1).normalized(), hit), Vector2(-2, -1).normalized(), "Outer corner reflects both independent axes without swapping components")
+	hit = Geometry.sweep(Vector2(300, 300), Vector2(500, 500), 10, TEST_ARENA, BLOCKS)
+	near(Geometry.reflect(Vector2.ONE.normalized(), hit), -Vector2.ONE.normalized(), "Rounded pillar corner retains radial reflection")
 	for data in [[Vector2(390, 450), Vector2(100, 450), BLOCKS], [Vector2(10, 450), Vector2(100, 450), []], [Vector2(450, 390), Vector2(600, 390), BLOCKS]]:
 		hit = Geometry.sweep(data[0], data[1], 10, TEST_ARENA, data[2])
 		check(not hit.hit, "Contact moving away or tangent does not bounce again")
@@ -158,6 +163,27 @@ func check_radial_footprints() -> void:
 		near(circle[i], Vector2(480, 300) + Vector2(cos(TAU * i / 32.0), sin(TAU * i / 32.0)) * 72, "No-cover circle point unchanged")
 	check(Geometry.radial_boundary(Vector2(480, 200), 72, ARENA, blocks).is_empty(), "Origin inside cover has no falsely visible radial area")
 
+func check_lane_footprints() -> void:
+	var blocks := [Rect2(300, 238, 44, 116)]
+	var origin := Vector2(250, 230)
+	var target := Vector2(928, 230)
+	var shielded := Vector2(365, 245)
+	var boundary := Geometry.lane_boundary(origin, target, 16, ARENA, blocks)
+	check(boundary == Geometry.lane_boundary(origin, target, 16, ARENA, blocks), "Lane footprint is deterministic")
+	check(boundary[0] == boundary[-1] and not Geometry2D.triangulate_polygon(boundary.slice(0, boundary.size() - 1)).is_empty(), "Clipped lane closes and triangulates")
+	check(not Geometry2D.is_point_in_polygon(shielded, boundary), "Grazing lane excludes protected floor inside the original capsule")
+	check(Geometry2D.is_point_in_polygon(Vector2(365, 225), boundary), "Grazing lane retains uncovered floor beyond the pillar")
+	check(Geometry2D.is_point_in_polygon(shielded, Geometry.lane_boundary(origin, target, 16, ARENA, [])), "Open-floor lane preserves its full capsule")
+	for x in range(260, 920, 5):
+		for y in range(216, 245, 2):
+			var point := Vector2(x, y)
+			var contact := Geometry.sweep(origin, point, 0, ARENA, blocks)
+			# Exact obstacle/silhouette contacts form the polygon's visible boundary.
+			if contact.hit and (point.distance_to(contact.position) < 0.002 or contact.position.distance_to(blocks[0].position) < 0.002):
+				continue
+			check(Geometry2D.is_point_in_polygon(point, boundary) == not contact.hit, "Lane warning agrees with cover LOS at %s" % point)
+	check(Geometry.lane_boundary(Vector2(320, 280), target, 16, ARENA, blocks).is_empty(), "Lane origin inside cover has no visible footprint")
+
 func _initialize() -> void:
 	check_sweeps()
 	check_corner_departures()
@@ -165,5 +191,6 @@ func _initialize() -> void:
 	check_layouts()
 	check_seeded_paths()
 	check_radial_footprints()
+	check_lane_footprints()
 	print("Arena geometry: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

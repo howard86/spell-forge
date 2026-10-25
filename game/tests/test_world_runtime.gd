@@ -49,12 +49,68 @@ func steer(direction: Vector2) -> void:
         else:
             Input.action_release(pair[0])
 
+func check_review_regressions(game) -> void:
+    # Original grazing lane: centerline misses cover, but its lower edge is shielded.
+    reset(game)
+    game.spawn_enemy("lane_archer", Vector2(250, 230), 99)
+    game.player_pos = Vector2(600, 230)
+    game.begin_enemy_warning(game.enemies[0])
+    var archer: Dictionary = game.enemies[0]
+    var boundary := Geometry.lane_boundary(archer.attack_origin, archer.attack_target, archer.attack_width, game.ARENA, game.obstacles)
+    game.player_pos = Vector2(365, 245)
+    game.enemy_attack(archer)
+    check(not Geometry2D.is_point_in_polygon(game.player_pos, boundary) and game.hp == 100, "Grazing lane warning and actual damage exclude the protected player")
+    game.player_pos = Vector2(365, 225)
+    game.enemy_attack(archer)
+    check(Geometry2D.is_point_in_polygon(game.player_pos, boundary) and game.hp == 78, "Uncovered portion of grazing lane still warns and damages")
+    reset(game)
+    game.player_pos = Vector2(365, 245)
+    game.hazards = [{"kind": "lane", "origin": Vector2(250, 230), "target": Vector2(928, 230), "width": 16.0, "progress": 0.0, "life": 1.0}]
+    game.update_hazards(1)
+    check(game.hp == 100, "Lane hazards use the same cover protection as lane warnings")
+    # An unperformed hidden Chain hop must not consume the shared cast budget.
+    reset(game)
+    for position in [Vector2(280, 300), Vector2(357, 300), Vector2(280, 200), Vector2(280, 150)]:
+        game.spawn_enemy("pursuer", position, 99)
+    var chained := cast(game, ["projectile", "pierce", "chain"], Vector2(280, 336), Vector2.UP)
+    game.resolve_projectile_hit(chained, game.enemies[0])
+    var chain_cast: Dictionary = game.casts[chained.cast_id]
+    check(game.enemies[1].hp == 42 and is_equal_approx(game.enemies[2].hp, 30.3) and is_equal_approx(game.enemies[3].hp, 30.3), "Chain skips the nearer hidden target and performs visible C/D hops")
+    check(chain_cast.chain_hops == 2 and chain_cast.effects_used == 3 and not chain_cast.visited.has(game.enemies[1].id), "Only performed visible Chain hops consume effects, hops, and visits")
+    game.spawn_enemy("pursuer", Vector2(210, 150), 99)
+    chained.position = Vector2(280, 218)
+    game.resolve_projectile_hit(chained, game.enemies[2])
+    check(chain_cast.chain_hops == 3 and is_equal_approx(game.enemies[4].hp, 30.3), "Later piercing contact can use the unspent hop on a newly eligible visible target")
+    # Initial muzzle offset crosses this rounded corner before its old projection.
+    for build in [["projectile"], ["projectile", "bounce", "wall_charge"]]:
+        reset(game)
+        game.spawn_enemy("pursuer", Vector2(330, 190), 99)
+        var corner_shot := cast(game, build, Vector2(286, 250), Vector2(0.6, -0.8))
+        check(corner_shot.position.distance_to(Vector2(295, 238)) < 0.002, "Muzzle is clipped to the first swept corner contact")
+        game.update_projectiles(0.2)
+        check(game.enemies[0].hp == 42, "Muzzle offset cannot launch a shot past a blocking corner")
+        if build.has("bounce"):
+            check(corner_shot.bounces == 2 and corner_shot.wall_charged and corner_shot.direction.x < 0, "Muzzle corner reflection consumes Bounce and grants Wall Charge")
+        else:
+            check(game.projectiles.is_empty(), "Blocked muzzle removes a bolt without Bounce")
+    reset(game)
+    game.obstacles = []
+    game.compiled = game.Spell.compile(["projectile", "bounce"])
+    game.casts[901] = game.Spell.new_cast(901, game.compiled)
+    game.add_projectile(Vector2(828, 454), Vector2(2, 1), false, 901)
+    var outer_corner: Dictionary = game.projectiles.back()
+    game.update_projectiles(0.4)
+    check(outer_corner.position.distance_to(Vector2(928, 504)) < 0.002 and outer_corner.direction.distance_to(Vector2(-2, -1).normalized()) < 0.002, "Unequal simultaneous outer-wall contact reflects each independent axis")
+    check(outer_corner.bounces == 2, "Simultaneous outer corner consumes one Bounce")
+
 func run() -> void:
     root.size = Vector2i(960, 540)
     var game = Game.new()
     game.settings_path = "user://world-runtime-%d.cfg" % Time.get_ticks_usec()
     root.add_child(game)
     game.set_physics_process(false)
+    check_review_regressions(game)
+    game.show_menu()
     # Menu setup is deliberate, while legacy direct callers keep their original spell.
     check(game.next_setup.configured, "menu deliberately configures the displayed Ember starter")
     var setup_pickers: Array = []

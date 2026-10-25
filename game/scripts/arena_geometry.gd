@@ -55,7 +55,7 @@ static func safe_position(point: Vector2, radius: float, arena: Rect2, blocks: A
 			break
 	return result
 
-static func _candidate(best: Dictionary, fraction: float, normal: Vector2, movement: Vector2) -> void:
+static func _candidate(best: Dictionary, fraction: float, normal: Vector2, movement: Vector2, arena_axis: int = -1) -> void:
 	if fraction < -EPSILON or fraction > 1.0 + EPSILON or movement.dot(normal) >= -EPSILON:
 		return
 	fraction = clampf(fraction, 0.0, 1.0)
@@ -63,8 +63,11 @@ static func _candidate(best: Dictionary, fraction: float, normal: Vector2, movem
 		best.hit = true
 		best.fraction = fraction
 		best.normal = normal
+		best.arena_axes = (1 << arena_axis) if arena_axis >= 0 else 0
 	elif absf(fraction - best.fraction) <= EPSILON:
 		best.normal = (best.normal + normal).normalized()
+		if arena_axis >= 0:
+			best.arena_axes |= 1 << arena_axis
 
 static func sweep(start: Vector2, end: Vector2, radius: float, arena: Rect2, blocks: Array) -> Dictionary:
 	radius = maxf(radius, 0.0)
@@ -72,7 +75,7 @@ static func sweep(start: Vector2, end: Vector2, radius: float, arena: Rect2, blo
 	var projected := safe_position(start, radius, arena, blocks)
 	if projected.distance_squared_to(start) > EPSILON * EPSILON:
 		return {"hit": true, "fraction": 0.0, "normal": (projected - start).normalized(), "position": projected}
-	var best := {"hit": false, "fraction": 1.0, "normal": Vector2.ZERO, "position": end}
+	var best := {"hit": false, "fraction": 1.0, "normal": Vector2.ZERO, "position": end, "arena_axes": 0}
 	if movement.length_squared() <= EPSILON * EPSILON:
 		return best
 	var low := arena.position + Vector2.ONE * radius
@@ -83,7 +86,7 @@ static func sweep(start: Vector2, end: Vector2, radius: float, arena: Rect2, blo
 		var normal := Vector2.ZERO
 		normal[axis] = -1.0 if movement[axis] > 0.0 else 1.0
 		var boundary: float = high[axis] if movement[axis] > 0.0 else low[axis]
-		_candidate(best, (boundary - start[axis]) / movement[axis], normal, movement)
+		_candidate(best, (boundary - start[axis]) / movement[axis], normal, movement, axis)
 	for block: Rect2 in blocks:
 		# Face tests retain the original rectangle's span. Corners below supply
 		# the circular arcs of the Minkowski sum, avoiding square-corner snags.
@@ -188,4 +191,33 @@ static func radial_boundary(origin: Vector2, radius: float, arena: Rect2, blocks
 			boundary[-1] = boundary[0]
 		else:
 			boundary.append(boundary[0])
+	return boundary
+
+# The rectangular arena reflects independent axes at a simultaneous corner.
+# Rounded internal corners still use their physical radial surface normal.
+static func reflect(direction: Vector2, contact: Dictionary) -> Vector2:
+	return -direction if int(contact.get("arena_axes", 0)) == 3 else direction.bounce(contact.normal)
+
+# Intersect the capsule with visibility from its damage origin. Both shapes
+# contain the origin, so their intersection is one connected star-shaped region.
+static func lane_boundary(origin: Vector2, target: Vector2, half_width: float, arena: Rect2, blocks: Array) -> PackedVector2Array:
+	var boundary := PackedVector2Array()
+	var width := maxf(half_width, 0.0)
+	if width <= 0:
+		return boundary
+	var angle := origin.direction_to(target).angle()
+	for i in 17:
+		boundary.append(origin + Vector2.from_angle(angle + PI / 2 + PI * i / 16.0) * width)
+	for i in 17:
+		boundary.append(target + Vector2.from_angle(angle - PI / 2 + PI * i / 16.0) * width)
+	if not blocks.is_empty():
+		var visibility := radial_boundary(origin, origin.distance_to(target) + width, arena, blocks, 128)
+		if visibility.is_empty():
+			return PackedVector2Array()
+		visibility.resize(visibility.size() - 1)
+		var pieces := Geometry2D.intersect_polygons(boundary, visibility)
+		if pieces.is_empty():
+			return PackedVector2Array()
+		boundary = pieces[0]
+	boundary.append(boundary[0])
 	return boundary

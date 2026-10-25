@@ -78,7 +78,7 @@ static func _reserve(cast: Dictionary, effects: int, projectiles: int = 0) -> bo
 	cast.projectiles_spawned += projectiles
 	return true
 
-static func resolve_hit(cast: Dictionary, projectile: Dictionary, target_id: int, targets: Array) -> Array:
+static func resolve_hit(cast: Dictionary, projectile: Dictionary, target_id: int, targets: Array, eligible: Callable = Callable()) -> Array:
 	var events: Array = []
 	var spell: Dictionary = cast.compiled
 	var generation := int(projectile.get("generation", 0))
@@ -113,7 +113,7 @@ static func resolve_hit(cast: Dictionary, projectile: Dictionary, target_id: int
 			"chain":
 				var origin := impact
 				while cast.chain_hops < MAX_CHAIN_HOPS:
-					var nearest := _nearest(origin, targets, cast.visited)
+					var nearest := _nearest(origin, targets, cast.visited, eligible)
 					if nearest.is_empty() or not _reserve(cast, 1):
 						break
 					var next_id := int(nearest.id)
@@ -133,11 +133,14 @@ static func resolve_hit(cast: Dictionary, projectile: Dictionary, target_id: int
 					events.append({"type": "explode", "position": impact, "radius": EXPLOSION_RADIUS, "damage": spell.damage * 0.75})
 	return events
 
-static func _nearest(origin: Vector2, targets: Array, visited: Dictionary) -> Dictionary:
+static func _nearest(origin: Vector2, targets: Array, visited: Dictionary, eligible: Callable = Callable()) -> Dictionary:
 	var nearest: Dictionary = {}
 	var best_distance := CHAIN_RADIUS * CHAIN_RADIUS
 	for target in targets:
 		if visited.has(int(target.id)):
+			continue
+		# World collision eligibility is checked before reserving a hop or visit.
+		if eligible.is_valid() and not eligible.call(origin, target.position):
 			continue
 		var distance := origin.distance_squared_to(target.position)
 		if distance > best_distance:
