@@ -2,6 +2,12 @@
 
 Use this sheet for a named build. Blank fields mean **not measured**, never a pass. The ten spells below are test candidates, not claims of viability. See [TESTING.md](TESTING.md) for severity and [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for release gates.
 
+## Current candidate scope
+
+The local candidate implements Forge/Warden and Archive/Archivist, each six trials plus its boss; optional four-slot setup, Ember/Frost starters, real reflector terrain, practice/comparisons/guide, recipes/profile recovery, safe-forge resume, workshop, manual codes, factual report and controller/accessibility paths. The isolated lab implements optional Frost/Split/Repulse prototypes; ordinary rules remain unchanged. The journeys below are acceptance procedures, not evidence they have passed.
+
+Contracts: [research hypotheses](OCTALYSIS_RESEARCH.md), [expeditions](EXPEDITIONS.md), [input journey](INPUT_JOURNEY.md), [diagnostics](COMPONENT_DIAGNOSTIC.md), [experiments](SPELL_EXPERIMENTS.md), [performance](PERFORMANCE.md), [roadmap queue](roadmap_queue.json) and [remaining gaps](ROADMAP_GAPS.md). Root records final automated/rendered/package results separately; human observations remain pending until a session is recorded.
+
 ## Session record
 
 | Field | Value to record |
@@ -12,7 +18,7 @@ Use this sheet for a named build. Blank fields mean **not measured**, never a pa
 | OS version / fresh machine or development machine | |
 | CPU / GPU / RAM / display resolution / scaling | |
 | Input / audio device / settings | |
-| Run seed / starting spell / reward choices in order | |
+| Run seed / expedition / slot cap / starting spell / route and reward choices in order | |
 | Experience with action games / prior Spellforge exposure | |
 | Recording consent / recording or observation-note location | |
 | Start / end / interruptions | |
@@ -71,7 +77,7 @@ Record pass/fail/not run, artifact revision, seed, evidence, and defect link for
 
 | Journey | Observable pass criterion | Result / evidence |
 | --- | --- | --- |
-| Start to victory | Six encounters, rewards and edits, boss phase transition, victory summary, restart all work. | |
+| Start to victory | For each expedition separately: six trials, rewards/edits, boss phase transition, victory summary/report and retry work. Record starter, cap and route. | |
 | Start to death | Zero health ends combat, result screen is usable, restart resets run state. | |
 | Editor validation | Missing source, bad order, duplicate or excess slots are rejected according to the contract; prior valid spell remains usable. | |
 | Low mana | Denied cast gives feedback, spends no partial cost, regeneration permits recovery. | |
@@ -85,3 +91,33 @@ Record pass/fail/not run, artifact revision, seed, evidence, and defect link for
 For each defect capture severity, revision, seed, reproduction steps, expected/actual result, recording/log, owner, and retest result. P0/P1 defects stop release. A fix is accepted only after rerunning its failing scenario where feasible.
 
 Finish with: participant counts, unaided successes, interaction comprehension, replay opportunities and starts, run-time distribution, viable-build evidence, open defects, and **go / revise / blocked** with reasons. Keep blind usability, automated correctness, local manual play, Windows export, and Steam acceptance evidence separate.
+
+## Roadmap iteration — experimentation, mastery and ownership
+
+Apply these checks only to a build that actually includes the relevant feature. Use `not implemented` or `not run` explicitly; a proposed journey is not a recorded pass. Record build/content version, expedition, selected route, challenge slot cap, recipe/checkpoint ID and whether a practice/unlocked setup was used. The two expeditions are alternative six-trial-plus-boss runs, not a twelve-trial run. Keep original baseline observations separate from a changed build.
+
+During blind play, record self-initiated edits, distinct legal spells actually equipped, practice entry/exit, recipe saves/revisits, route choices and voluntary replay. A reward being offered or owned does not establish that it was equipped or understood. Ask after play: “What did you try to change?”, “What happened?”, “What would you try next?”, and “Is there anything you would want to keep for another run?” Retain participant explanations and stop/continue reasons rather than inferring them from counts. Do not compute a motivation or fun score.
+
+| Directed journey | Observable pass criterion | Result / revision / evidence |
+| --- | --- | --- |
+| Named recipe and relaunch | Save a legal ordered recipe, relaunch and reopen its exact components/name; loading grants no unavailable normal-run components. | |
+| Corrupt/incompatible profile | With a separate test profile, truncate or alter its version/content IDs. Show honest feedback and preserve originals: supported corruption may recover a valid backup; an explicit future-version primary refuses downgrade and blocks writes. Verify no-save play remains available; never touch the participant's real profile. | |
+| Practice and order comparison | Enter labeled practice, compare the same target setup with an order-swapped valid pair, observe actual resolver behavior, reset resources and return without expedition rewards. | |
+| Alternative expeditions | Choose each expedition separately; complete six trials and its boss, including death/retry and distinct route/terrain/boss cues. | |
+| Checkpoint resume | Stop at a documented safe boundary, relaunch and resume the same expedition, seed, encounter, inventory, spell and report; rewards cannot be taken twice. Complete the resumed run. | |
+| Four-slot challenge | Opt in explicitly; editor, recipe import, preview and resumed run all enforce four slots; a five-slot recipe gives clear feedback. Verify ordinary five-slot mode separately. | |
+| Workshop discovery | Trigger the documented observed condition once, revisit after relaunch and verify it persists; unrelated/practice actions do not award expedition-only progress. | |
+| Recipe sharing | Export and import a valid recipe with the same ordered IDs; reject unknown versions, unknown IDs, oversized content and invalid dependencies clearly, without changing the prior recipe or inventory. | |
+| Controls and accessibility | Rebind a control, handle a conflict, relaunch and verify persistence. Test supported display scaling/readability and reduced-motion/audio choices on named hardware and devices. | |
+| Factual debrief | Independently compare a short controlled run to offered/chosen/owned/equipped data, actual damage/resource changes and exclusive combat/reward/pause/settings time; stop/finish freezes the report. Show the recent-event cap honestly. | |
+| Balance experiment comparison | Label Frost/Split, Split balance, Repulse or an additional enemy experimental; use the same recorded setup and all attempts for comparison, then record actual tactical trade-offs and player explanations. | |
+
+For report checks, deliberately over-damage a nearly defeated enemy and over-heal a nearly full player: recorded amounts must match the actual clamped changes. Pause and enter settings for known intervals; neither interval may inflate combat time. Make a reward offer, choose recovery and leave an owned component unequipped to confirm all four categories remain distinguishable. Exceed 128 events to verify the visible report identifies the bounded recent tail and does not claim a complete replay.
+
+Report each proposed outcome with evidence and uncertainty: what experiments participants attempted, which interactions they could explain accurately, which saved builds they revisited, what they chose to keep, and why they continued or stopped. Automated checks remain correctness evidence; participant observations support design decisions without establishing broad commercial demand.
+
+## Final candidate evidence boundaries
+
+Repeat the two expeditions and complete supported input paths on the actual accepted artifact. Record physical controller model and reconnect behavior, keyboard-only operation, 960×540/1280×720 display conditions, normal/large menu text and any dense HUD/slot labels. Synthetic focus checks and screenshots corroborate implementation; they do not replace a person completing the journey.
+
+Performance uses the separate serialized workload and environment record in [PERFORMANCE.md](PERFORMANCE.md). Do not record a frame-time pass from headless resolver stress or an invulnerable completion pilot. The original task ZIP remains unavailable; this sheet validates the user-approved reconstruction, not invented SF-008–SF-029 criteria.

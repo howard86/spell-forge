@@ -1,45 +1,32 @@
 # Spellforge
 
-**Spellforge** is a single-player, top-down pixel-art action roguelite about programming spells from modular magical components.
+Spellforge is a single-player, top-down pixel-art action roguelite about composing one active spell from ordered magical components.
 
-> **Project status:** Local demo implementation in development. Release gates, Windows acceptance, external playtests, and Steam publication remain pending. See [implementation status](docs/IMPLEMENTATION_STATUS.md) for evidence and limitations.
+**Status:** Integrated local demo candidate on Godot 4.7.2. The playable roadmap features are integrated for review; human balance/usability, physical controllers, graphical Windows acceptance, target-hardware performance and Steam publication remain separate gates. See the [evidence ledger](docs/IMPLEMENTATION_STATUS.md).
 
-## Vision
+## Play and experiment
 
-Compose a spell, fight through compact randomized encounters, earn new components, and revise your build between battles. Each run should reward meaningful experimentation rather than repetitive stat grinding.
+Choose **Forge** or **Archive**, a five-slot or optional four-slot run, and an Ember or Frost starting spell. Each expedition has six trials followed by its own boss: the moving Warden or stationary Archivist. Component rewards, recovery and real reflector terrain give you opportunities to revise a build between fights.
 
-**MVP target:** A Windows-first, 10–15-minute playable run with one wizard, one biome, six encounters, a final boss, eleven spell components, six normal enemy archetypes, and a simple ordered-slot spell editor.
+Practice provides all eleven standard components without granting run inventory. Compare equipped and draft spells in six controlled situations, follow a skippable first experiment, save named recipes, resume at a safe forge, revisit workshop discoveries and exchange recipe/challenge codes manually. The factual debrief separates resources, damage sources, reward choices and time spent fighting, crafting, paused or in settings. Optional Frost/Split and Repulse candidates live in the isolated practice lab; ordinary runs keep standard spell rules.
 
-## Development
+Keyboard/mouse and controller paths, remapping, menu focus, local controller text entry, large menu text, reduced flashing and camera-shake controls are implemented. Device feel and human readability still need playtesting.
 
-The initial plan assumes a solo developer working roughly 15–20 hours per week, with a **16-week target for a public free demo**. This is a planning estimate, not a confirmed release date. Proposed engine: Godot 4, with GDScript for gameplay.
+## Start development
 
-## Project documentation
+Open `game/project.godot` with **Godot 4.7.2**, or run `godot --path game` from this repository. See [game instructions](game/README.md), [getting started](docs/GETTING_STARTED.md), and the [test commands](docs/TESTING.md). The Bun tools check repository tooling; Godot parses and tests gameplay.
 
-- [Game design and MVP scope](docs/GAME_DESIGN.md)
-- [Spell components and execution rules](docs/SPELL_SYSTEM.md)
-- [Seven-stage development roadmap](docs/ROADMAP.md)
-- [Technical architecture](docs/ARCHITECTURE.md)
-- [Test strategy and validation gates](docs/TESTING.md)
-- [Steam demo release plan](docs/RELEASE.md)
-- [Contribution guidelines](CONTRIBUTING.md)
-- [Milestone register and exit gates](docs/MILESTONES.md)
-- [Decision log](docs/DECISIONS.md)
-- [Getting started](docs/GETTING_STARTED.md)
+## Documentation
 
-**Current first priority:** Validate combat and ordered spell construction with players before expanding content. See the [playtest protocol](docs/PLAYTEST.md) and [roadmap](docs/ROADMAP.md).
+- [Current roadmap](docs/ROADMAP.md), [reconstructed dependency queue](docs/roadmap_queue.json), and [remaining gaps](docs/ROADMAP_GAPS.md)
+- [Design](docs/GAME_DESIGN.md), [architecture](docs/ARCHITECTURE.md), and [standard spell rules](docs/SPELL_SYSTEM.md)
+- [Research and design hypotheses](docs/OCTALYSIS_RESEARCH.md), [expeditions and terrain](docs/EXPEDITIONS.md), and [input journey](docs/INPUT_JOURNEY.md)
+- [Situational diagnostics](docs/COMPONENT_DIAGNOSTIC.md), [practice-only experiments](docs/SPELL_EXPERIMENTS.md), and [performance protocol](docs/PERFORMANCE.md)
+- [Playtests](docs/PLAYTEST.md), [UI checklist](docs/UI_PLAYTEST.md), [release gates](docs/RELEASE.md), and [implementation evidence](docs/IMPLEMENTATION_STATUS.md)
+- [Contributing](CONTRIBUTING.md), [decisions](docs/DECISIONS.md), [issues](https://github.com/howard86/spell-forge/issues), and [pull requests](https://github.com/howard86/spell-forge/pulls)
 
-Design targets and measured acceptance are distinct; a working implementation does not establish pacing, usability, or release readiness.
-
-## Tracking status
-
-Seven [GitHub milestones](https://github.com/howard86/spell-forge/milestones) track the stage issues #2–#8. Cross-stage design, licensing and Steamworks issues are assigned to their relevant milestones. The local playable implementation and verification are tracked in [the evidence ledger](docs/IMPLEMENTATION_STATUS.md); external release gates remain open.
-
-## Links
-
-- [Issues](https://github.com/howard86/spell-forge/issues)
-- [Pull requests](https://github.com/howard86/spell-forge/pulls)
+The original 30-task ZIP is unavailable. The user authorized reconstruction from its available summary; only SF-001–SF-007 and SF-030 have identified descriptions. The R01–R12 queue is a new dependency grouping, not recovered SF-008–SF-029 specifications. The older sixteen-week schedule is historical planning, not a release promise. No automated check establishes fun, replay motivation or commercial demand.
 
 ## License
 
-Original project source code, documentation, procedural artwork, and synthesized audio are licensed under the [MIT License](LICENSE). Godot, its bundled font/libraries, and development dependencies retain their own licenses and notices. See [provenance and attribution](game/assets/PROVENANCE.md).
+Original source, documentation, procedural artwork and synthesized audio use the [MIT License](LICENSE). Godot and development dependencies retain their own notices; see [provenance](game/assets/PROVENANCE.md) and in-game credits.

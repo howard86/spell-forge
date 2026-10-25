@@ -1,5 +1,51 @@
 # Implementation and Release Evidence Ledger
 
+## Integrated roadmap candidate — 2026-10-25
+
+The journey, profile/share, preview/practice/guide, Forge/Archive terrain and bosses, controller/accessibility and isolated experiment packages are now integrated in the local candidate. This is implementation status, not release acceptance. Consolidated local evidence is now recorded in [ROADMAP_VALIDATION.md](ROADMAP_VALIDATION.md): 18 suites passed, 28 rendered captures completed, both debug exports built, actual macOS package smoke passed, and nine rendered performance runs were measured. Hosted checks and external acceptance remain separate. The source hash manifest identifies the validated game files.
+
+| Area | Source-integrated behavior / coverage | Acceptance boundary |
+| --- | --- | --- |
+| Persistent experimentation | Named recipes, safe-forge checkpoint identity/eligibility, discoveries/milestones, cosmetic workshop, manual recipe/challenge codes, visible recovery/protection failures and no-save play. `test_profile`, `test_sharing`, `test_journey`. | Final integrated relaunch/failure-path checks; human ownership and comprehension. |
+| Learning / feedback | Six paired real-runtime fixtures, prospective reward inspection, unrestricted isolated Practice, skippable first experiment, factual report with aggregate validation and a visible 128-event tail. `test_preview`, `test_report`, `test_registry`, `test_journey`. | Final controlled instrumentation checks; human prediction/explanation and usefulness. |
+| Alternative expeditions | Forge/Warden and Archive/Archivist, six trials each; open/reflector routes, actual shared terrain and line-of-sight rules; optional four-slot setup. `test_director`, `test_geometry`, `test_world_runtime`. | Final full-run/retry/resume correctness; human tactical difference, readability and balance. |
+| Input / accessibility | Controller combat, remaps, focus/scroll/Back, local controller entry, large menu text, reduced flash and shake/audio settings. `test_bindings`, `test_controls`, `test_ui`, `test_input_journey`. | Final synthetic regressions and captures; physical controller/reconnect and human keyboard/readability remain pending. |
+| Optional prototypes | Practice-only Frost/Split ordering, Split target exclusion and virtual-slot Repulse. `test_experiments` verifies separate candidate behavior and ordinary-rule isolation. | Unaccepted balance changes; no standard catalog/profile/share flags. Human comparison remains pending. |
+| Performance / packages | Eighteen suites configured in Linux/Windows CI; fixed debug smoke/performance hooks and bounded representative workloads implemented. | Local capture/export/package and measurement evidence is complete in ROADMAP_VALIDATION.md. Current-head hosted status and target-hardware/human acceptance remain separate; boss frame-budget acceptance is not established. |
+
+The original ZIP is unavailable. The user authorized reconstruction; known descriptions are SF-001–SF-007 and SF-030, while detailed SF-008–SF-029 mapping remains unknown. The [R01–R12 dependency queue](roadmap_queue.json) is the reconstructed grouping. See [roadmap/gaps](ROADMAP_GAPS.md), [research](OCTALYSIS_RESEARCH.md), [expedition contract](EXPEDITIONS.md), [input journey](INPUT_JOURNEY.md), [diagnostics](COMPONENT_DIAGNOSTIC.md), [lab candidates](SPELL_EXPERIMENTS.md), [performance protocol](PERFORMANCE.md) and [release gates](RELEASE.md).
+
+The remaining historical sections preserve actual earlier checks, revisions and limitations. Their pending integration labels describe the package snapshot at the time; the current implementation table above supersedes them. Human balance, pacing/comprehension/replay, physical controllers, graphical fresh-Windows acceptance, target-hardware budgets and Steamworks/publication remain open until evidence exists. No numerical motivation score or automated assertion closes those gates.
+
+## Earlier foundation-only evidence — 2026-10-25
+
+Inspected baseline: `ad162de`, Godot 4.7.2. [ROADMAP.md](ROADMAP.md) records the current reconstructed direction; [ROADMAP_GAPS.md](ROADMAP_GAPS.md) records missing source-task requirements and the report integration contract. The task ZIP is unavailable, so this ledger does not claim original SF-008–SF-029 specifications or acceptance. The available summary identifies SF-001 documentation, SF-002 bounded local run report, SF-003 forge comparisons, SF-004 guided first experiment, SF-005 situational diagnostics, SF-006 optional ordering prototype, SF-007 optional single-variable Split adjustment and SF-030 factual debrief. Optional experiments do not imply accepted balance changes.
+
+| Scope | Current local evidence | Remaining boundary |
+| --- | --- | --- |
+| SF-001 documentation | Current roadmap, explicit source-task gaps, extended playtest journeys and preserved historical ledger | Reconcile unavailable original tasks when supplied; do not substitute the reconstruction for their acceptance criteria. |
+| Stable IDs/versioning | Registry schema 1/content `"1"`, eleven stable component IDs, compiler-backed validation and optional smaller slot cap | Future content migrations and integrated recipe/profile/checkpoint consumers need final-head checks. |
+| SF-002 report module | `test_report.gd`: 69 checks, 0 failures, exit 0; time buckets, 128-event cap, snapshot isolation, JSON round-trip, invalid restore, complete-history aggregate reconstruction, denial bounds after rollover, coherent saturation and finish inventory at event-count ceiling | Runtime callers and persisted reports are not established by isolated module tests. No player/session data has been collected. |
+| Registry module | `test_registry.gd`: 24 checks, 0 failures, exit 0; explicit identity list, catalog consistency, prerequisites, invalid data and four-slot cap | Whole-game integration and caller coverage remain separate checks. |
+| SF-030 and remaining direction | Planned integration described in roadmap/gap sheet | No new human usability, mastery, ownership, replay or fun acceptance is claimed. Experiments remain experimental until supported by evidence. |
+
+Commands executed in the isolated roadmap workspace on macOS using the official `4.7.2.stable.official.ed1daf0bf` binary:
+
+```text
+/private/tmp/spellforge-godot-4.7.2/Godot.app/Contents/MacOS/Godot --headless --path game --log-file /private/tmp/spellforge-roadmap-evidence/report.log --script res://tests/test_report.gd
+/private/tmp/spellforge-godot-4.7.2/Godot.app/Contents/MacOS/Godot --headless --path game --log-file /private/tmp/spellforge-roadmap-evidence/registry.log --script res://tests/test_registry.gd
+```
+
+An initial report test failed because native nested dictionary equality distinguishes integer event values from their equivalent JSON-parsed floating-point values. The assertion now compares JSON-observable round-trip values; rejection checks compare the exact restored pre-state. The original scenario was rerun and passes. Both commands print macOS `get_system_ca_certificates` / `ret != noErr` at startup, then execute their suites and exit 0; no certificate-dependent feature was exercised. The focused tests do not run editor import. Logs live at the paths above; the tests are repeatable from source, while these temporary logs are local evidence only.
+
+Independent data review follow-up: contradictory damage-source totals and denial counts are now rejected atomically; incoming-damage source attribution shares the total's saturation ceiling; validated final ownership/equipment is recorded even when the event counter is full. The report suite directly constructs a valid 128-row tail at the exact event-count ceiling, reruns the original two-source `MAX_TOTAL` saturation case, and checks JSON restore and aggregate roundoff tolerance. Final focused reruns: report **61/61**, registry **24/24**, both exit 0. Logs: `/private/tmp/spellforge-roadmap-evidence/report-review-fixes.log` and `/private/tmp/spellforge-roadmap-evidence/registry-review-fixes.log`. Seed range remains the exact JSON integer contract documented in the gap sheet; portable consumers need the same boundaries.
+
+A subsequent retained-history review found that one `sample` event plus a forged mana-denial count could still pass independent aggregate bounds. Restore now reconstructs all aggregates from a complete ordered history using the live aggregation routine; after eviction it reconciles denial categories with their retained rows and the possible evicted count. The exact one-sample forgery, changed complete-history damage/source/non-damage totals, missing retained denials and impossible evicted denials reject atomically. A saturated history with an evicted cap-filling event and a later uncredited damage source remains valid. Focused reruns: report **69/69**, registry **24/24**, both exit 0; logs `/private/tmp/spellforge-roadmap-evidence/report-history-fixes.log` and `/private/tmp/spellforge-roadmap-evidence/registry-history-fixes.log`.
+
+## Historical implementation and release ledger
+
+The sections below preserve earlier evidence, environments, revisions and limitations. Their original wording describes those historical snapshots; it does not establish current-head CI or acceptance of the roadmap integration.
+
 This ledger tracks issue acceptance, not development effort. **No runtime, playtest, platform, or release gate is verified by the presence of this document.** The isolated local implementation is assembled; local verification below does not close external release gates. The foundation baseline was `2a5710117eba92e8838c393d51ca8ad5dabf7873`.
 
 ## Evidence rules

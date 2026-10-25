@@ -1,0 +1,52 @@
+# Roadmap Gaps and Acceptance Boundaries
+
+Snapshot date: 2026-10-25. Inspected baseline: `ad162de`; engine target: Godot 4.7.2. This file separates available direction, source implementation and evidence. It does not certify original task completion.
+
+## Missing task source
+
+The requested task ZIP is unavailable. The user authorized reconstruction from the available summary. Its known numbered descriptions are SF-001 documentation, SF-002 bounded local run report, SF-003 current-versus-draft forge comparisons, SF-004 guided first experiment, SF-005 situational component diagnostic, SF-006 optional ordering prototype, SF-007 optional single-variable Split adjustment, and SF-030 factual debrief. The detailed requirements, ordering and acceptance criteria for SF-008–SF-029 cannot be recovered from the available feature summary. No missing task mapping or specification is invented here. Preserve this gap until the original source is supplied; reconcile actual differences then. SF-006/SF-007 remain optional experiments, not accepted balance changes.
+
+## Integrated candidate and remaining evidence
+
+| Area | Current implementation | Remaining gap |
+| --- | --- | --- |
+| Spell identity | Schema 1/content `"1"`, eleven stable component IDs; compiler-backed validation and selected smaller cap. | Future ID removal/rename requires migration; labels/catalog indices are not persistence IDs. |
+| Report / SF-030 debrief | Actual clamped damage/resources, exclusive state time, explicit choices/inventory/build, source/denial aggregates and recent-tail screen are wired into runtime. | Final-head controlled-path checks and human interpretation; the report cannot authenticate caller omissions or infer fun. |
+| Recipes/profile/sharing | Bounded primitive schemas, backup recovery, protected/future-file write refusal, no-save mode, 32 named recipes, discoveries/milestones, cosmetic palette and `SF1:` codes. | Interrupted-write/platform-failure behavior and final relaunch journeys need named-artifact evidence; future-primary refusal intentionally preserves data rather than silently downgrading it. |
+| Practice / comparisons / tutorial | Detached real-runtime equipped/draft fixtures, prospective reward inspection, isolated full-component Practice and skippable prediction/test/revise guide. | Human comprehension, useful follow-up experiments and reward-ownership clarity; fixture damage is not sustained DPS or broad viability. |
+| Expeditions / routes / terrain / second boss | Both six-trial-plus-boss alternatives implemented; reflector collision/visibility, Forge route choices and stationary Archivist ring/marks/phase patterns. | Human balance and readable tactical distinction; final-head whole-run and rendered evidence remain separate from implementation. |
+| Checkpoints / challenge | Safe-forge eligibility/draft/route/report persistence; full identity validation; optional four-slot constraint and compatible retry/share setup. | Final-artifact suspend/relaunch/resume/completion, corrupt-save and no-duplicate-reward checks; human feedback on losing/keeping progress. |
+| Controls / accessibility | Keyboard/controller combat, saved remaps, protected exits, focus/Back/scroll, local controller entry and large menu text. | Physical controller/reconnect, keyboard-only human journeys and graphical small-window/large-text readability; fixed HUD and dense slot sizes have not become a universal scalable UI. |
+| Balance experiments | Practice-only Frost/Split ordering, Split target exclusion and Repulse lab candidates implemented. | These remain unaccepted standard-rule changes; repeated-cast pressure, full encounters and participant understanding are unvalidated. An additional normal enemy is not implemented. |
+| Performance / release | Bounded representative harness and expanded CI/package hooks exist; historical artifact evidence retained. | Local checks and serialized measurements are recorded in [ROADMAP_VALIDATION.md](ROADMAP_VALIDATION.md). Boss frame intervals exceed the 16.67 ms yardstick in baseline and candidate; target-hardware budgets, graphical fresh Windows, blind playtests, Steamworks and publication authorization remain open. |
+
+Contracts and evidence plans: [research](OCTALYSIS_RESEARCH.md), [dependency queue](roadmap_queue.json), [expeditions](EXPEDITIONS.md), [input](INPUT_JOURNEY.md), [component diagnostic](COMPONENT_DIAGNOSTIC.md), [lab experiments](SPELL_EXPERIMENTS.md), [performance](PERFORMANCE.md), [testing](TESTING.md) and [release](RELEASE.md). The consolidated local run is in [ROADMAP_VALIDATION.md](ROADMAP_VALIDATION.md); historical package-level counts remain distinct. Final-artifact human/relaunch observations and failure injection are still separate acceptance gates.
+
+## Report contract for integration
+
+`reset(seed, expedition)` starts a fresh report. `advance(state, delta)` accepts finite nonnegative seconds only for `combat`, `reward`, `paused`, and `settings`. Other states are excluded. The caller must provide exclusive state time and count pause/settings independently from combat. Time and observed totals cap at 315,360,000; seeds/counts use the exact JSON integer range (±9,007,199,254,740,991 for seeds).
+
+`event(kind, details)` stores at most 128 recent accepted events with their original monotonic indices; `event_count` counts accepted events including evicted rows. Each details object is JSON-safe, at most 4 nested levels and 4,096 encoded bytes, with at most 16 dictionary keys, 32 array entries, 64-character keys and 256-character strings. The total is bounded local data, not a complete replay or full-run event archive. Invalid events are ignored without mutation. There is no network, file I/O, live input or random sampling.
+
+Reserved details keys are `offered` and `chosen` (unique reward-ID arrays), `owned` (component-ID inventory including Projectile), and `equipped` (a valid ordered spell whose components are owned). Rewards may include `restore`; it is never a component. Offered/chosen summaries accumulate unique seen IDs; the recent event tail preserves order only while those events remain in the tail. They are not full-run offer/choice frequencies. Inventory and equipment are current snapshots, not inferred from a chosen reward. Example calls:
+
+```gdscript
+report.event("reward_offered", {"offered": ["fire", "restore"]})
+report.event("reward_chosen", {"chosen": ["fire"], "owned": ["projectile", "fire"]})
+report.event("spell_equipped", {"equipped": ["projectile", "fire"]})
+report.event("damage_dealt", {"amount": actual_health_removed})
+```
+
+The observation kinds `damage_dealt`, `damage_taken`, `mana_spent`, `mana_restored`, and `health_restored` accumulate finite nonnegative caller-observed `amount` values. Pass actual resource changes, not attempted damage, maximum health, catalog DPS or predicted output. Reports cannot independently authenticate the caller's observations.
+
+`damage_sources` stores bounded full-run incoming-damage totals for `unknown`, `contact`, `lane`, `sweep`, `charge`, `melee`, `projectile`, and `hazard`. `event("damage_taken", {"amount": actual, "source": source})` updates the matching bucket; omitted/unrecognized source strings go to `unknown`. A cause is never inferred from damage amount or enemy proximity. `cast_denials` stores full-run accepted observation counts for `mana`, `cooldown`, `invalid`, and `capacity` using `event("cast_denied", {"reason": reason})`. Capacity is an observed world-projectile-cap denial. These aggregates survive eviction from the 128-event tail and strict JSON restore validates their exact whitelisted keys and bounded values. If the runtime rate-limits held-input observations, label counts **denied cast observations**, not total button presses or cast attempts.
+
+Incoming-damage saturation is shared: once `observations.damage_taken` reaches 315,360,000, later incoming-damage events receive no additional source credit. A crossing event credits its source only the representable increase remaining in the total. The event tail retains the caller's actual amount; aggregates are capped, rather than claims of an uncapped lifetime sum. Restore requires the sum of `damage_sources` to match `observations.damage_taken`, allowing the larger of 0.000001 absolute rounding error and 0.000000000001 relative error. It also rejects denial category counts whose sum exceeds `event_count`, and rejects positive observation totals when no events exist. These checks allow legitimate aggregate history whose original events have left the recent tail.
+
+When `event_count` is at most 128, all accepted events are retained: restore recomputes every observation, incoming-damage source and denial aggregate from those ordered rows using the same shared saturation routine as live event recording. Amount comparisons use the rounding tolerance above; denial counts must match exactly. After rollover, each denial category must cover its retained rows, and the remaining aggregate denial counts must fit within the number of evicted events. Damage-source allocations are not reconstructed from a partial tail: an earlier evicted event may have exhausted the shared ceiling, leaving a later retained damage event with zero aggregate credit. Reports still cannot authenticate caller observations or reconstruct evicted content.
+
+`snapshot()` deep-copies all state. `restore(dictionary)` validates all required fields, versions, bounds, recent-event sequence and component identities, rejects unknown top-level fields, and preserves the previous report on failure. JSON may convert integer event details to equivalent floating-point numbers; consumers must treat them as JSON numbers. At the exact event-count ceiling, later events are rejected without mutation; `finish(won, encounter, owned, equipped)` still records the validated actual final inventory, spell and outcome independently of whether a finish event fits, then freezes further events/time. Invalid final state returns an empty dictionary. Repeated successful finish returns the same data. Runtime/file persistence is the integrator's responsibility.
+
+## Decision evidence
+
+Use anonymous participant observations and quoted stop/continue reasons from [PLAYTEST.md](PLAYTEST.md). Keep creative experimentation, mastery and ownership as questions to investigate. Automated tests can prove finite behavior, validation and reproducibility; they do not prove fun, comprehension, motivation, balanced choices or demand.

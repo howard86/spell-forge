@@ -5,7 +5,8 @@ No downloaded textures, sprite sheets, music recordings, samples, fonts, or othe
 third-party media are imported by this presentation layer.
 
 - `game/scripts/presentation.gd`: original pixel silhouettes, wizard, five enemy
-  archetypes, Runebound Warden, masonry floor, arcane floor markings, braziers,
+  archetypes, Runebound Warden, floating-tome Archivist, reflector cover,
+  masonry floor, arcane floor markings, braziers,
   projectiles, attack warnings, and impact-state colors, authored for this project.
   Godot canvas primitives render them directly; no external image asset is needed.
 - `game/scripts/game_audio.gd`: original 16-second D-minor ambient arpeggio and
@@ -20,6 +21,10 @@ The art direction is a single cool-stone arcane ruin biome with teal player magi
 warm hostile cues, muted floor contrast, and different silhouettes for each enemy.
 Enemy bolts are diamonds; player bolts have square cores. Hazard rings include a
 progress arc and central cross so warnings do not rely on hue alone.
+The Archive reuses this original ruin vocabulary with reflector layouts and the
+Archivist's page/tome silhouette. Cover-clipped warnings, recipe/workshop screens
+and paired spell-lab previews also use engine primitives; this expansion adds no
+external media. Workshop palettes change presentation only.
 
 ## License and redistribution
 
