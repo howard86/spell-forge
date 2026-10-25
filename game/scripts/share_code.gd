@@ -38,6 +38,44 @@ static func _valid_payload(payload: Dictionary) -> bool:
 static func _invalid(message: String) -> Dictionary:
 	return {"valid": false, "error": message, "payload": {}}
 
+# Validate before converting: Godot repairs malformed UTF-8, which would change
+# an imported payload and emit a Unicode parsing error before schema validation.
+static func _valid_utf8(raw: PackedByteArray) -> bool:
+	var index := 0
+	while index < raw.size():
+		var leading: int = raw[index]
+		index += 1
+		if leading < 0x80:
+			continue
+		var continuation_count: int
+		var codepoint: int
+		var minimum: int
+		if leading >= 0xC2 and leading <= 0xDF:
+			continuation_count = 1
+			codepoint = leading & 0x1F
+			minimum = 0x80
+		elif leading >= 0xE0 and leading <= 0xEF:
+			continuation_count = 2
+			codepoint = leading & 0x0F
+			minimum = 0x800
+		elif leading >= 0xF0 and leading <= 0xF4:
+			continuation_count = 3
+			codepoint = leading & 0x07
+			minimum = 0x10000
+		else:
+			return false
+		if index + continuation_count > raw.size():
+			return false
+		for offset in continuation_count:
+			var next: int = raw[index + offset]
+			if next < 0x80 or next > 0xBF:
+				return false
+			codepoint = (codepoint << 6) | (next & 0x3F)
+		index += continuation_count
+		if codepoint < minimum or codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF):
+			return false
+	return true
+
 static func decode(code: String) -> Dictionary:
 	if code.length() > MAX_CODE_LENGTH or not code.begins_with(PREFIX):
 		return _invalid("Use a supported SF1 share code (up to 4096 characters).")
@@ -51,6 +89,8 @@ static func decode(code: String) -> Dictionary:
 	var raw := Marshalls.base64_to_raw(encoded)
 	if raw.is_empty() or raw.size() > MAX_PAYLOAD_BYTES or Marshalls.raw_to_base64(raw) != encoded:
 		return _invalid("Share code payload is malformed or too large.")
+	if not _valid_utf8(raw):
+		return _invalid("Share code contains malformed UTF-8.")
 	var parser := JSON.new()
 	if parser.parse(raw.get_string_from_utf8()) != OK or not parser.data is Dictionary:
 		return _invalid("Share code contains malformed JSON.")

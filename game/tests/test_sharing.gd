@@ -49,5 +49,12 @@ func _initialize() -> void:
 	missing.erase("components")
 	check(not Share.decode(raw_code(missing)).valid, "Missing fields rejected without access errors")
 	check(not Share.decode(raw_code({"large": "x".repeat(3000)})).valid, "Oversized decoded payload rejected")
+	var malformed_utf8 := JSON.stringify(base).to_utf8_buffer()
+	var name_start := JSON.stringify(base).find("Build")
+	malformed_utf8[name_start] = 0xFF
+	var utf8_result: Dictionary = Share.decode("SF1:" + Marshalls.raw_to_base64(malformed_utf8))
+	print("UTF-8 probe: invalid byte accepted=%s error=%s" % [utf8_result.valid, utf8_result.error])
+	check(not utf8_result.valid, "Invalid UTF-8 byte in otherwise valid recipe is rejected")
+	check(Share.decode(Share.encode_recipe("寒霜 🔥", ["projectile", "frost"])).valid, "Valid multibyte UTF-8 recipe names round trip")
 	print("Sharing: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
