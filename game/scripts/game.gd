@@ -669,6 +669,9 @@ func simulate(delta: float) -> void:
 func cast_spell() -> bool:
     if state != "combat":
         return false
+    if not compiled.get("valid", false):
+        deny_cast("invalid")
+        return false
     if cooldown > 0:
         deny_cast("cooldown")
         return false
@@ -864,7 +867,8 @@ func enemy_attack(enemy: Dictionary) -> void:
             damage_player(22.0, kind)
         add_effect("chain", enemy.attack_origin, enemy.attack_target, 0)
     elif kind == "mark":
-        hazards.append({"position": enemy.get("attack_target", player_pos), "radius": 38.0, "progress": 0.0, "life": 1.2, "source": "hazard"})
+        if hazards.size() < 64:
+            hazards.append({"position": enemy.get("attack_target", player_pos), "radius": 38.0, "progress": 0.0, "life": 1.2, "source": "hazard"})
     elif kind == "charge" or enemy.kind in ["pursuer", "swarm", "bulwark"]:
         var origin: Vector2 = enemy.position
         var destination: Vector2 = enemy.get("attack_target", origin) if kind == "charge" else origin + enemy.aim * (45 if enemy.kind == "bulwark" else 68)

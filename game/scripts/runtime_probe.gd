@@ -11,6 +11,7 @@ const Spell = preload("res://scripts/spell_engine.gd")
 var entry_mode := "fixed_debug_entry"
 var failures := 0
 var results: Array = []
+var _input_map: Dictionary = {}
 
 static func distribution(samples: Array) -> Dictionary:
     if samples.is_empty():
@@ -32,7 +33,7 @@ func run(game: Node) -> void:
     game.set_physics_process(false)
     game.set_process_input(false)
     game.set_process_unhandled_input(false)
-    _release_input()
+    _isolate_input()
     var frames := DEFAULT_FRAMES
     var write_result := false
     for argument in OS.get_cmdline_user_args():
@@ -85,6 +86,7 @@ func run(game: Node) -> void:
         push_error("Performance probe audio shutdown failed.")
         failures += 1
     _cleanup_settings(game)
+    _restore_input()
     print("PERF_COMPLETE ", JSON.stringify({"schema_version": SCHEMA_VERSION, "scenarios": results.size(), "error_count": failures}))
     game.get_tree().quit(1 if failures else 0)
 
@@ -240,8 +242,32 @@ func _environment(game: Node) -> Dictionary:
         "window_size": [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y] if DisplayServer.get_name() != "headless" else null}
 
 func _release_input() -> void:
-    for action in ["cast", "move_up", "move_right", "move_down", "move_left"]:
+    for action in ["cast", "dodge", "pause", "move_up", "move_right", "move_down", "move_left",
+            "aim_up", "aim_right", "aim_down", "aim_left", "ui_accept"]:
+        # Older builds have no controller aim actions.
+        if InputMap.has_action(action):
+            Input.action_release(action)
+
+func _isolate_input() -> void:
+    # Polling Input (not just node callbacks) must be independent of live devices.
+    # Keep actions themselves so deterministic action_press still drives the game.
+    for action in InputMap.get_actions():
+        _input_map[action] = {"events": InputMap.action_get_events(action),
+            "deadzone": InputMap.action_get_deadzone(action)}
         Input.action_release(action)
+        InputMap.action_erase_events(action)
+
+func _restore_input() -> void:
+    _release_input()
+    for action in _input_map:
+        if not InputMap.has_action(action):
+            InputMap.add_action(action)
+        Input.action_release(action)
+        InputMap.action_erase_events(action)
+        InputMap.action_set_deadzone(action, _input_map[action].deadzone)
+        for event in _input_map[action].events:
+            InputMap.action_add_event(action, event)
+    _input_map.clear()
 
 func _cleanup_settings(game: Node) -> void:
     # Never remove arbitrary user paths; only our timestamped isolated fixtures.

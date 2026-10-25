@@ -35,14 +35,15 @@ jobs:
         run: godot --headless --path game --script res://tests/test_stress.gd
       - name: Test roadmap progression, persistence, terrain, input, and experiments
         run: |
-          for suite in report registry profile sharing preview geometry journey bindings world_runtime input_journey experiments controls_regressions; do
+          for suite in report registry profile sharing preview geometry journey bindings world_runtime input_journey experiments controls_regressions probe; do
             godot --headless --path game --script "res://tests/test_$suite.gd" --log-file "/tmp/spellforge-$suite.log"
             if grep -E 'SCRIPT ERROR:|ERROR:|ObjectDB instances.*leaked' "/tmp/spellforge-$suite.log"; then exit 1; fi
             grep -E '[0-9]+ checks, 0 failures' "/tmp/spellforge-$suite.log"
           done
       - name: Check bounded performance probe integration
+        timeout-minutes: 2
         run: |
-          godot --headless --path game --script res://tests/probe_runtime.gd --log-file /tmp/spellforge-probe.log -- --probe-frames=16
+          timeout --signal=TERM --kill-after=5s 60s godot --headless --path game --script res://tests/probe_runtime.gd --log-file /tmp/spellforge-probe.log -- --probe-frames=16
           if grep -E 'SCRIPT ERROR:|ERROR:|ObjectDB instances.*leaked' /tmp/spellforge-probe.log; then exit 1; fi
           grep 'PERF_COMPLETE' /tmp/spellforge-probe.log
       # The image installs templates under /root, but container jobs run with HOME=/github/home.
@@ -82,7 +83,7 @@ jobs:
           Invoke-WebRequest 'https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip' -OutFile $archive
           Expand-Archive $archive -DestinationPath $editorDir
           $editor = Join-Path $editorDir 'Godot_v4.7.2-stable_win64_console.exe'
-          foreach ($suite in @('spells', 'run', 'director', 'balance', 'controls', 'ui', 'stress', 'report', 'registry', 'profile', 'sharing', 'preview', 'geometry', 'journey', 'bindings', 'world_runtime', 'input_journey', 'experiments', 'controls_regressions')) {
+          foreach ($suite in @('spells', 'run', 'director', 'balance', 'controls', 'ui', 'stress', 'report', 'registry', 'profile', 'sharing', 'preview', 'geometry', 'journey', 'bindings', 'world_runtime', 'input_journey', 'experiments', 'controls_regressions', 'probe')) {
             $log = Join-Path $env:RUNNER_TEMP "spellforge-$suite.log"
             & $editor --headless --path game --script "res://tests/test_$suite.gd" --log-file $log
             if ($LASTEXITCODE -ne 0) { throw "$suite exited with code $LASTEXITCODE" }
