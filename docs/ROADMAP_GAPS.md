@@ -50,3 +50,5 @@ When `event_count` is at most 128, all accepted events are retained: restore rec
 ## Decision evidence
 
 Use anonymous participant observations and quoted stop/continue reasons from [PLAYTEST.md](PLAYTEST.md). Keep creative experimentation, mastery and ownership as questions to investigate. Automated tests can prove finite behavior, validation and reproducibility; they do not prove fun, comprehension, motivation, balanced choices or demand.
+
+Review follow-up: retained report observations now impose lower bounds after rollover, complete reward summaries must match ordered history, and retained reward IDs must remain in lifetime summaries. Checkpoints reject empty pending offers and a reopened current-encounter reward. See [STACK_REVIEW.md](STACK_REVIEW.md) for the reproduced cases and current checks.

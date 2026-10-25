@@ -1,5 +1,7 @@
 # Runtime performance verification
 
+The comparative measurements below belong to the pre-review source hashes. Subsequent terrain, input, and probe-isolation fixes are recorded in [STACK_REVIEW.md](STACK_REVIEW.md); the old timings do not establish performance acceptance for those changes.
+
 **Status: local measurements recorded; frame-budget acceptance remains open.** Three serialized rendered repeats each of the baseline, candidate editor, and actual macOS debug package completed with zero probe or engine errors. No speedup or Windows/target-hardware acceptance is claimed. Scripted samples do not replace human playtesting.
 
 The yardstick is a 60 fps game with a 16.67 ms frame budget. Observe p50, p95,

@@ -36,18 +36,19 @@ movement, melee lunges and Warden charges sweep their full movement. A visibilit
 graph with at most ten nodes (source, target and expanded block corners) routes
 actors around the two authored blocks. Ranged actors approach until their shot
 radius clears cover, avoiding permanent corner firing stalls. Spawns and initial
-shots project out of terrain without receiving a free Wall Charge.
+shots project out of terrain without receiving a free Wall Charge. The player's muzzle offset is swept from the caster first, so projection cannot skip a rounded corner contact.
 
 Both friendly and hostile projectiles stop at the first terrain contact. Incoming
 enemy hits resolve in travel order before reflection; targets beyond cover cannot
 be hit. Actual reflections consume Bounce and enable Wall Charge. As before,
 remaining travel in that simulation tick is discarded after reflection. Internal
 cover uses the shot's radius; the existing outer-wall center contact remains
-unchanged for baseline bank-shot compatibility.
+unchanged for baseline bank-shot compatibility. Simultaneous outer-corner contacts reflect both axes independently; rounded internal corners use their surface normal.
 
-Lane/sweep warning endpoints, damaging segments and effects use the same clipped
-line. Charges show the body-sized swept endpoint. Chain hops stop at blocked
-segments; explosions, delayed blasts and ground marks require line of sight from
+Lane/sweep warning capsules and their interior markers are clipped to visibility
+from the damage origin, including grazing cover shadows. Damaging segments require
+the same line of sight. Charges show the body-sized swept endpoint. Chain selects
+visible eligible targets before spending a hop or recording a visit; explosions, delayed blasts and ground marks require line of sight from
 their center at detonation. Radial fills, outlines, countdown arcs, detonation
 effects and preview boundaries use a shared ray-clipped footprint: cover removes
 the shielded part of the visible area as well as blocking its damage. Rays at

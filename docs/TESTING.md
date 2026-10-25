@@ -8,7 +8,7 @@ Import serially before validation; never run editor import concurrently with tes
 
 ```sh
 godot --headless --path game --editor --quit
-for suite in spells run director balance controls ui stress report registry profile sharing preview geometry journey bindings world_runtime input_journey experiments; do
+for suite in spells run director balance controls ui stress report registry profile sharing preview geometry journey bindings world_runtime input_journey experiments controls_regressions probe; do
   godot --headless --path game --script "res://tests/test_$suite.gd" || exit 1
 done
 bun run check
@@ -22,10 +22,11 @@ bun run check
 | `preview` | Paired real-runtime single-cast fixtures, overkill, defenses, moving targets, resource assumptions and detached-state isolation. |
 | `geometry`, `world_runtime` | Terrain sweeps, safe spawns, cover visibility, reflection chronology, routes, Archivist patterns/phases, and Archive combat reachability. |
 | `journey` | Practice/guide, inventory boundaries, recipes, discoveries, safe-forge resume, portable setup and factual report screens. |
-| `bindings`, `controls`, `ui`, `input_journey` | Remap persistence/conflicts, synthetic gameplay input, focus/Back/scrolling, controller text entry, held-confirm suppression and normal/large menu bounds. |
+| `bindings`, `controls`, `ui`, `input_journey`, `controls_regressions` | Remap persistence/conflicts, synthetic gameplay input, focus/Back/scrolling, controller text entry, held-confirm suppression and normal/large menu bounds. |
+| `probe` | Invalid-cast side effects, hazard capacity, physical input-map isolation/restoration, and legacy action maps. |
 | `experiments` | Practice-only Frost/Split/Repulse candidate behavior and normal-rule/profile isolation. |
 
-A zero exit and expected success marker are necessary; also inspect logs for script/runtime errors and leaked objects. Test counts change with regressions, so use the final run's recorded results rather than copying older package totals. CI configures all eighteen suites on matching Linux/Windows editors and separately downloads/executes the Windows debug artifact. Configuration is not current-head CI evidence.
+A zero exit and expected success marker are necessary; also inspect logs for script/runtime errors and leaked objects. Test counts change with regressions, so use the final run's recorded results rather than copying older package totals. CI configures all twenty suites on matching Linux/Windows editors and separately downloads/executes the Windows debug artifact. Configuration is not current-head CI evidence.
 
 ## User-data isolation
 

@@ -1,5 +1,7 @@
 # Integrated roadmap validation — 2026-10-25
 
+This page preserves the pre-review snapshot and its original source hashes. See [STACK_REVIEW.md](STACK_REVIEW.md) for the subsequent five-PR review, fixes, and current validation.
+
 This records the reconstructed roadmap candidate based on `ad162de`, using the
 official Godot `4.7.2.stable.official.ed1daf0bf` editor and matching export templates.
 The original task ZIP remains unavailable; this evidence does not recover or

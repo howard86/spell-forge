@@ -10,7 +10,7 @@ instance for the session. Before constructing menus, call
 `bindings.install_defaults()`, then `bindings.load_bindings()`. Surface a failed
 load's `bindings.notice` visibly; defaults remain available. Tests and captures
 must set `bindings.path` to an isolated fixture before loading or saving. The
-production default is `user://bindings.cfg`, separate from existing settings.
+integrated game's production path is `user://bindings.json`, separate from existing settings. Despite the filename, its format is ConfigFile, not JSON. The standalone `Bindings` helper defaults to `user://bindings.cfg`; `game.gd` overrides that path before loading.
 
 After constructing **every** menu, including modal submenus and settings reached
 from Pause, call `Navigation.connect_focus_neighbors(content)` followed by
@@ -19,7 +19,7 @@ Call again after adding/removing/hiding/disabling options; `focus_first` is
 available for a deliberately fresh screen. Controls must be in the scene tree
 with `FOCUS_ALL`. Tree order defines the wrapping chain; hidden ancestors,
 disabled buttons, and mouse-only controls are excluded. Existing valid focus is
-preserved. Focus reveals enclosing scroll containers immediately when geometry is available, then retries across three layout frames. Deferred callbacks verify the control is still valid, inside the tree and focused; zero-size pre-layout geometry is ignored. The helper owns no input callbacks. Fresh menus settle before restoring the title and focused Begin view.
+preserved. Focus reveals enclosing scroll containers immediately when geometry is available, then retries across three layout frames. Deferred callbacks verify the control is still valid, inside the tree and focused; zero-size pre-layout geometry is ignored. Forge rebuilds restore component/action identity rather than repeated button labels, with an adjacent-slot fallback after removal. The helper owns no input callbacks. Fresh menus settle before restoring the title and focused Begin view.
 
 Keep text editors and sliders' normal Godot input handling. Route menu Back from
 `ui_cancel` in `_unhandled_input`, after focused editors have had a chance to
@@ -31,7 +31,7 @@ Escape event through both menu Back and combat Pause. Mark a handled Back or
 Pause event handled and return immediately.
 
 For controller aim, sample `Bindings.controller_aim()` during combat. A nonzero
-vector selects stick aiming; retain the previous aim when it returns zero.
+vector selects stick aiming after normalization; retain the previous direction when it returns zero. Dodge directions are normalized independently of analog movement strength.
 Mouse motion should select mouse aiming again. Existing movement/cast/dodge/
 pause actions already work through `InputMap`, so they require no raw key or
 button checks. The controller mapping is:
@@ -56,7 +56,7 @@ handled so it cannot also trigger gameplay or a focused button.
 
 Rebindable actions are movement, cast, dodge, and pause. Keyboard, mouse and
 controller-button remaps each replace that action's corresponding input family;
-other families and analog axes remain. Movement/aim axes cannot be rebound.
+other families and analog axes remain. Transient mouse-wheel inputs are rejected because held-action polling cannot reliably consume them. Movement/aim axes cannot be rebound.
 Escape and Start remain protected pause exits. Escape is reserved for menu Back
 and cannot be captured, and Start cannot be assigned to another action. Gameplay
 conflicts are rejected rather than removing another required binding. Modified
@@ -100,13 +100,13 @@ mouse-aim handoff check.
 | Narrow window and increased UI scale | All destinations reachable, readable focus, text and state cues; no clipped Back control or trapped focus |
 | Controller disconnect/reconnect | Keyboard fallback and Pause remain available; reconnect restores controller navigation and combat |
 
-Shake/reduced-flash and audio controls are preserved. Large menu text increases reading text and the menu theme; dense forge-slot labels and the fixed-layout combat HUD retain their measured sizes. The main panel has bounded vertical scrolling and focus reveals nested scroll panels. White three-pixel focus borders and textual READY/cooldown indicators complement color cues. Physical readability still needs human review.
+Shake/reduced-flash and audio controls are preserved. Large menu text increases reading text, forge controls, and preview measurements, including reward inspection and the lab. The fixed-layout combat HUD retains its measured sizes. The main panel has bounded vertical scrolling and focus reveals nested scroll panels. White three-pixel focus borders and textual READY/cooldown indicators complement color cues. Physical readability still needs human review.
 
 ## Integrated runtime seam
 
-`game.clear_panel()` resets `back_action` and schedules `game.finish_menu()` after the page is built. For custom pages, set `game.back_action = your_callback`; `game.button("Back …", callback)` also registers it. Call `finish_menu()` explicitly after dynamically changing available controls. It reconnects directional and Tab neighbors and restores a matching button label where possible. Back is consumed once in `_unhandled_input`; OptionButton and editor GUI handling runs first. At a reward root, Back does not choose a reward or abandon the run. Practice Back restores its saved inventory and returns to the menu.
+`game.clear_panel()` resets `back_action` and schedules `game.finish_menu()` after the page is built. For custom pages, set `game.back_action = your_callback`; `game.button("Back …", callback)` also registers it. Call `finish_menu()` explicitly after dynamically changing available controls. It reconnects directional and Tab neighbors, restores forge component/action identity, and otherwise restores a matching button label where possible. Back is consumed once in `_unhandled_input`; OptionButton and editor GUI handling runs first. At a reward root, Back does not choose a reward or abandon the run. Practice Back restores its saved inventory and returns to the menu.
 
-`game.open_entry(line_edit, "seed" | "recipe" | "share")` opens a reusable local entry modal. Done commits; Cancel/Back preserves the original field and returns to the previous page. It provides digits/signs for seeds and letters, case, digits, punctuation, space, erase, clear, Done and Cancel for names/codes. Limits are 32/40/4096 characters. The first focus is Done, and recipes default to “My spell”. There is no implicit clipboard read or network operation.
+`game.open_entry(line_edit, "seed" | "recipe" | "share")` opens a reusable local entry modal. Done commits; Cancel/Back preserves the original field and returns to the previous page. It provides digits/signs for seeds and letters, case, digits, punctuation, space, erase, clear, Done and Cancel for names/codes. Limits are 32/40/4096 characters. The first focus is Done. Directional navigation follows grid rows and columns while Tab remains sequential; recipes default to “My spell”. There is no implicit clipboard read or network operation.
 
 Right-stick aim retains its last direction at neutral; mouse motion retakes aim. Menus and resume suppress cast/dodge until confirm and gameplay buttons are released. HUD dodge/pause hints follow the last input device and current mapping; full labels are in Settings. Capture conflicts keep capture active, Back cancels, and save errors remain visible while the current-session binding stays active.
 
@@ -134,7 +134,7 @@ Run from the isolated checkout:
 /private/tmp/spellforge-godot-4.7.2/Godot.app/Contents/MacOS/Godot --headless --path game --script res://tests/test_bindings.gd --log-file /private/tmp/spellforge-roadmap-evidence/bindings.log
 ```
 
-The test uses only `/private/tmp/spellforge-roadmap-evidence/bindings-test.cfg`,
+The test uses a timestamped `user://bindings-test-*.cfg` fixture,
 snapshots/restores affected InputMap actions and deadzones, and removes its
 configuration fixture. It checks defaults/idempotence, remapping and reset,
 primitive round trips, conflicts and malformed/oversized/future schemas,
