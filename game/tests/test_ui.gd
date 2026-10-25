@@ -197,6 +197,9 @@ func run() -> void:
     scene.finish_run(false)
     check(labels(scene.panel).contains("0 / 6 trials cleared"), "first trial defeat does not count current trial cleared")
     check(await scene.audio.shutdown(), "audio shuts down cleanly")
+    for fixture_path in [scene.settings_path, scene.profile_path, scene.bindings_path]:
+        for suffix in ["", ".bak", ".tmp", ".bak.tmp"]:
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path + suffix))
     scene.queue_free()
     await settle()
     print("UI integration: %d checks, %d failures" % [checks, failures])

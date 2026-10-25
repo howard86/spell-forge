@@ -1,6 +1,9 @@
 extends Node2D
 const Spell = preload("res://scripts/spell_engine.gd")
 const Director = preload("res://scripts/run_director.gd")
+const Report = preload("res://scripts/run_report.gd")
+const Profile = preload("res://scripts/player_profile.gd")
+const Journey = preload("res://scripts/journey_ui.gd")
 const Art = preload("res://scripts/presentation.gd")
 const ARENA := Rect2(32, 88, 896, 416)
 const MAX_PROJECTILES := 160
@@ -55,12 +58,177 @@ var hud: Control
 var audio: Node
 var seed_input: LineEdit
 var exit_requested := false
+var profile_path := "user://profile.json"
+var bindings_path := "user://bindings.json"
+var profile_enabled := true
+var storage_problem := false
+var profile = Profile.new()
+var report = Report.new()
+var journey = Journey.new()
+var journey_notice := ""
+var practice := false
+var expedition := "forge"
+var challenge := "standard"
+var starting_choice := "ember"
+var route := "open"
+var next_setup := {"expedition": "forge", "challenge": "standard", "starting_choice": "ember", "seed": 0, "seed_set": false, "configured": false}
+var debrief: Dictionary = {}
+var denial_times: Dictionary = {}
+
+func max_slots() -> int:
+    return 4 if challenge == "four_slot" else 5
+
+func profile_active() -> bool:
+    return is_inside_tree() and profile_enabled
+
+func profile_feedback(success: bool, message_value: String) -> bool:
+    journey_notice = message_value if success else profile.notice
+    storage_problem = not success
+    return success
+
+func saving_available() -> bool:
+    if profile_active():
+        return true
+    journey_notice = "Saving is off for this session. Recipes and checkpoints will not be saved."
+    return false
+
+func save_recipe(recipe_name: String, recipe_components: Array) -> bool:
+    return profile_feedback(profile.save_recipe(recipe_name, recipe_components), "Recipe saved.") if saving_available() else false
+
+func delete_recipe(recipe_name: String) -> bool:
+    return profile_feedback(profile.delete_recipe(recipe_name), "Recipe deleted.") if saving_available() else false
+
+func save_progress() -> bool:
+    return profile_feedback(profile.save_profile(), "Workshop progress saved.") if saving_available() else false
+
+func clear_checkpoint() -> bool:
+    return profile_feedback(profile.clear_checkpoint(), "") if profile_active() else true
+
+func checkpoint() -> Dictionary:
+    return {"schema_version": 1, "content_version": "1", "seed": run_seed,
+        "expedition": expedition, "challenge": challenge, "starting_choice": starting_choice,
+        "encounter": encounter_index, "state": "reward", "hp": hp, "mana": mana,
+        "owned": owned.duplicate(), "components": components.duplicate(), "draft": draft.duplicate(),
+        "offers": offers.duplicate(), "selected_reward": selected_reward, "selected_component": selected_component,
+        "elapsed": elapsed, "kills": kills, "report": report.snapshot(), "route": route}
+
+func save_checkpoint() -> bool:
+    if practice or state != "reward" or not profile_active():
+        return false
+    return profile_feedback(profile.set_checkpoint(checkpoint()), "Safe forge checkpoint saved.")
+
+func suspend_run() -> void:
+    if save_checkpoint():
+        show_menu()
+    else:
+        show_reward()
+
+func resume_checkpoint() -> bool:
+    if not profile_active():
+        return false
+    var saved: Dictionary = profile.data.checkpoint.duplicate(true)
+    var restored = Report.new()
+    if not Profile.validate_checkpoint(saved) or not restored.restore(saved.get("report", {})) or restored.snapshot().finished:
+        journey_notice = "Checkpoint is invalid; the current run was preserved."
+        if state == "menu":
+            show_menu()
+        return false
+    var restored_data: Dictionary = restored.snapshot()
+    if int(restored_data.seed) != int(saved.seed) or restored_data.expedition != saved.expedition or restored_data.owned != saved.owned or restored_data.equipped != saved.components:
+        journey_notice = "Checkpoint report does not match its run; the current run was preserved."
+        if state == "menu":
+            show_menu()
+        return false
+    practice = false
+    report = restored
+    run_seed = int(saved.seed)
+    expedition = saved.expedition
+    challenge = saved.challenge
+    starting_choice = saved.starting_choice
+    route = saved.route
+    encounter_index = int(saved.encounter)
+    hp = float(saved.hp)
+    mana = float(saved.mana)
+    owned = saved.owned.duplicate()
+    components = saved.components.duplicate()
+    draft = saved.draft.duplicate()
+    offers = saved.offers.duplicate()
+    selected_reward = saved.selected_reward
+    selected_component = saved.selected_component if not str(saved.selected_component).is_empty() else draft[0]
+    elapsed = float(saved.elapsed)
+    kills = int(saved.kills)
+    compiled = Spell.compile(components)
+    enemies.clear()
+    projectiles.clear()
+    hazards.clear()
+    casts.clear()
+    state = "reward"
+    show_reward()
+    return true
+
+func abandon_run() -> void:
+    if clear_checkpoint():
+        show_menu()
+    else:
+        label_text(journey_notice, 14)
+
+func play_without_saving() -> void:
+    if state != "menu":
+        return
+    profile_enabled = false
+    journey_notice = "Saving is off for this session. Recipes and checkpoints will not be saved."
+    begin_from_menu()
+    if state == "combat":
+        resource_notice = "Saving is off · no checkpoints this session"
+        resource_notice_time = 3.0
+
+func reject_seed() -> void:
+    journey_notice = "Use a whole-number seed from -9007199254740991 to 9007199254740991."
+    resource_notice = "Seed out of range · current run preserved"
+    resource_notice_time = 3.0
+    if state == "menu":
+        show_menu()
+
+func begin_from_menu() -> void:
+    var value := seed_input.text.strip_edges()
+    if value.is_empty():
+        begin_setup_run(int(next_setup.seed) if next_setup.get("seed_set", false) else int(Time.get_unix_time_from_system()))
+        return
+    var digits := value.trim_prefix("-").trim_prefix("+")
+    while digits.begins_with("0"):
+        digits = digits.trim_prefix("0")
+    if not value.is_valid_int() or digits.length() > 16 or (digits.length() == 16 and digits > "9007199254740991"):
+        reject_seed()
+        return
+    begin_setup_run(int(value))
+
+func begin_setup_run(seed_value: int) -> void:
+    start_run(seed_value, next_setup if next_setup.get("configured", false) else {})
+
+func deny_cast(reason: String) -> void:
+    if not is_inside_tree() or practice:
+        return
+    # Held input reports at most once per second for each denial reason.
+    if elapsed - float(denial_times.get(reason, -100.0)) >= 1.0:
+        report.event("cast_denied", {"reason": reason, "mana": mana, "needed": compiled.get("mana_cost", 8)})
+        denial_times[reason] = elapsed
+
 
 func _ready() -> void:
     get_tree().auto_accept_quit = false
     var smoke_test := OS.is_debug_build() and "--smoke-test" in OS.get_cmdline_user_args()
     if smoke_test:
         settings_path = "user://export-smoke-%d.cfg" % Time.get_ticks_usec()
+    if settings_path != "user://settings.cfg":
+        if profile_path == "user://profile.json":
+            profile_path = settings_path + ".profile.json"
+        if bindings_path == "user://bindings.json":
+            bindings_path = settings_path + ".bindings.json"
+    profile.path = profile_path
+    if profile_enabled:
+        storage_problem = not profile.load_profile()
+        journey_notice = profile.notice
+    journey.game = self
     load_settings()
     audio = Art.create_audio()
     add_child(audio)
@@ -98,6 +266,10 @@ func clear_panel() -> void:
         content.remove_child(child)
         child.queue_free()
     panel.size = Vector2(800, 340)
+    content.add_theme_constant_override("separation", 5)
+    var surface = panel.get_theme_stylebox("panel").duplicate()
+    surface.border_color = Color(0.9, 0.5, 0.2) if profile.data.workshop == "ember" else Color(0.45, 0.75, 1.0)
+    panel.add_theme_stylebox_override("panel", surface)
     panel.show()
 
 func label_text(value: String, size: int = 18) -> Label:
@@ -125,10 +297,28 @@ func show_menu() -> void:
     label_text("SPELLFORGE", 36)
     label_text("Build a spell. Survive six trials. Break the Warden.")
     seed_input = LineEdit.new()
+    seed_input.max_length = 32
     seed_input.placeholder_text = "Run seed (blank for a new adventure)"
     seed_input.tooltip_text = "The same integer repeats encounters and reward choices."
     content.add_child(seed_input)
-    button("Begin run", func(): start_run(int(seed_input.text) if seed_input.text.is_valid_int() else int(Time.get_unix_time_from_system())))
+    button("Begin run", begin_from_menu)
+    if profile_enabled and not profile.data.checkpoint.is_empty():
+        button("Resume safe forge", resume_checkpoint)
+    var extras := HBoxContainer.new()
+    content.add_child(extras)
+    for entry in [["Practice forge", journey.show_practice], ["First experiment" if not profile.data.tutorial_seen else "Experiment guide", journey.show_tutorial], ["Workshop", journey.show_workshop], ["Share / import", journey.show_sharing]]:
+        var item := button(entry[0], entry[1])
+        content.remove_child(item)
+        extras.add_child(item)
+    if profile_enabled and storage_problem:
+        var offline_button := button("Play without saving", play_without_saving)
+        content.remove_child(offline_button)
+        extras.add_child(offline_button)
+    if not profile_enabled:
+        journey_notice = "Saving is off for this session. Recipes and checkpoints will not be saved."
+    if not journey_notice.is_empty():
+        var notice := label_text(journey_notice, 13)
+        notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     button("Settings", func(): show_settings("menu"))
     button("Credits", show_credits)
     button("Quit", request_exit)
@@ -171,7 +361,20 @@ func show_credits() -> void:
     content.add_child(credits)
     button("Back", show_menu)
 
-func start_run(seed_value: int) -> void:
+func start_run(seed_value: int, setup: Dictionary = {}) -> void:
+    if seed_value < -9007199254740991 or seed_value > 9007199254740991:
+        reject_seed()
+        return
+    if not clear_checkpoint():
+        show_menu()
+        return
+    practice = false
+    expedition = str(setup.get("expedition", "forge"))
+    challenge = str(setup.get("challenge", "standard"))
+    starting_choice = str(setup.get("starting_choice", "ember"))
+    route = "open"
+    report.reset(seed_value, expedition)
+    denial_times.clear()
     run_seed = seed_value
     encounter_index = 0
     hp = 100.0
@@ -183,7 +386,12 @@ func start_run(seed_value: int) -> void:
     owned = ["projectile"]
     selected_component = "projectile"
     components = ["projectile"]
+    if not setup.is_empty():
+        var starter := "frost" if starting_choice == "frost" else "fire"
+        owned.append(starter)
+        components.append(starter)
     compiled = Spell.compile(components)
+    report.event("run_started", {"owned": owned, "equipped": components})
     message = ""
     start_encounter()
 
@@ -273,6 +481,8 @@ func _physics_process(delta: float) -> void:
     visual_time += delta
     if state == "combat":
         simulate(delta)
+    elif not practice:
+        report.advance(state, delta)
     update_hud()
     queue_redraw()
 
@@ -280,13 +490,17 @@ func simulate(delta: float) -> void:
     if state != "combat":
         return
     elapsed += delta
+    report.advance("combat", delta)
     cooldown = maxf(0, cooldown - delta)
     dodge_time = maxf(0, dodge_time - delta)
     dodge_cooldown = maxf(0, dodge_cooldown - delta)
     hurt_time = maxf(0, hurt_time - delta)
     message_time = maxf(0, message_time - delta)
     resource_notice_time = maxf(0, resource_notice_time - delta)
+    var previous_mana := mana
     mana = minf(100, mana + delta * 22)
+    if mana > previous_mana:
+        report.event("mana_restored", {"amount": mana - previous_mana})
     aim = (cursor_position - player_pos).normalized()
     if aim == Vector2.ZERO:
         aim = Vector2.RIGHT
@@ -312,15 +526,21 @@ func simulate(delta: float) -> void:
         encounter_clear()
 
 func cast_spell() -> bool:
-    if state != "combat" or cooldown > 0:
+    if state != "combat":
+        return false
+    if cooldown > 0:
+        deny_cast("cooldown")
         return false
     if mana < float(compiled.mana_cost):
+        deny_cast("mana")
         resource_notice = "Mana recovering · need %d mana" % compiled.mana_cost
         resource_notice_time = 1.0
         return false
     if projectiles.size() >= MAX_PROJECTILES:
+        deny_cast("capacity")
         return false
     mana -= float(compiled.mana_cost)
+    report.event("mana_spent", {"amount": float(compiled.mana_cost)})
     cooldown = compiled.cooldown
     cast_id += 1
     casts[cast_id] = Spell.new_cast(cast_id, compiled.duplicate(true))
@@ -372,7 +592,7 @@ func update_enemies(delta: float) -> void:
                 begin_enemy_warning(enemy)
         enemy.position = enemy.position.clamp(ARENA.position + Vector2(28, 28), ARENA.end - Vector2(28, 28))
         if distance < enemy.radius + 11:
-            damage_player(8.0)
+            damage_player(8.0, "contact")
 
 func begin_enemy_warning(enemy: Dictionary) -> void:
     var kind := "melee"
@@ -409,16 +629,16 @@ func enemy_attack(enemy: Dictionary) -> void:
             add_projectile(enemy.position, enemy.aim.rotated((i - (count - 1) / 2.0) * 0.22), true)
     elif kind in ["lane", "sweep"]:
         if segment_contact(player_pos, float(enemy.attack_width) + 11.0, enemy.attack_origin, enemy.attack_target) != INF:
-            damage_player(22.0)
+            damage_player(22.0, kind)
         add_effect("chain", enemy.attack_origin, enemy.attack_target, 0)
     elif kind == "mark":
-        hazards.append({"position": enemy.get("attack_target", player_pos), "radius": 38.0, "progress": 0.0, "life": 1.2})
+        hazards.append({"position": enemy.get("attack_target", player_pos), "radius": 38.0, "progress": 0.0, "life": 1.2, "source": "hazard"})
     elif kind == "charge" or enemy.kind in ["pursuer", "swarm", "bulwark"]:
         var origin: Vector2 = enemy.position
         var destination: Vector2 = enemy.get("attack_target", origin) if kind == "charge" else origin + enemy.aim * (45 if enemy.kind == "bulwark" else 68)
         destination = destination.clamp(ARENA.position + Vector2(28, 28), ARENA.end - Vector2(28, 28))
         if segment_contact(player_pos, float(enemy.radius) + 11.0, origin, destination) != INF:
-            damage_player(15.0)
+            damage_player(15.0, kind)
         enemy.position = destination
 
 func update_projectiles(delta: float) -> void:
@@ -445,7 +665,7 @@ func update_projectiles(delta: float) -> void:
             var contact := segment_contact(player_pos, 15.0, previous, destination)
             if contact != INF:
                 projectile.position = previous.lerp(destination, contact)
-                damage_player(12.0)
+                damage_player(12.0, "projectile")
                 consumed = true
         else:
             var contacts: Array = []
@@ -576,6 +796,7 @@ func update_effects(delta: float) -> void:
 func hurt_enemy(enemy: Dictionary, amount: float, sound: bool = true) -> void:
     if enemy.hp <= 0:
         return
+    report.event("damage_dealt", {"amount": minf(maxf(0, amount), float(enemy.hp))})
     enemy.hp -= amount
     if enemy.hp <= 0:
         kills += 1
@@ -589,12 +810,13 @@ func update_hazards(delta: float) -> void:
             return
         hazard.progress += delta / hazard.life
         if hazard.progress >= 1 and (segment_contact(player_pos, float(hazard.width) + 11.0, hazard.origin, hazard.target) != INF if hazard.get("kind", "circle") == "lane" else player_pos.distance_to(hazard.position) < hazard.radius + 11):
-            damage_player(22.0)
+            damage_player(22.0, str(hazard.get("source", "unknown")))
     hazards = hazards.filter(func(h): return h.progress < 1)
 
-func damage_player(amount: float) -> void:
+func damage_player(amount: float, source: String = "unknown") -> void:
     if state != "combat" or dodge_time > 0 or hurt_time > 0:
         return
+    report.event("damage_taken", {"amount": minf(maxf(amount, 0), hp), "source": source})
     hp = maxf(0, hp - amount)
     hurt_time = 0.65
     audio.play_sfx("hit")
@@ -612,11 +834,19 @@ func encounter_clear() -> void:
         finish_run(true)
         return
     state = "reward"
+    var previous_hp := hp
     hp = minf(100, hp + 15)
+    report.event("health_restored", {"amount": hp - previous_hp})
+    report.event("mana_restored", {"amount": 100 - mana})
     mana = 100
     offers = Director.rewards(run_seed, encounter_index, owned)
     selected_reward = false
     draft = components.duplicate()
+    report.event("reward_offered", {"encounter": encounter_index, "offered": offers, "owned": owned, "equipped": components})
+    if profile_active():
+        profile.discover(owned)
+        profile.milestone("first_clear")
+        save_checkpoint()
     show_reward()
 
 func choose_reward(id: String) -> void:
@@ -625,12 +855,18 @@ func choose_reward(id: String) -> void:
     selected_reward = true
     audio.play_sfx("reward")
     if id == "restore":
+        var previous_hp := hp
         hp = minf(100, hp + 25)
+        report.event("health_restored", {"amount": hp - previous_hp})
     elif not owned.has(id):
         owned.append(id)
         selected_component = id
-        if draft.size() < 5 and Spell.compile(draft + [id]).valid:
+        if draft.size() < max_slots() and Spell.compile(draft + [id]).valid:
             draft.append(id)
+    report.event("reward_chosen", {"encounter": encounter_index, "chosen": [id], "owned": owned, "equipped": components})
+    if profile_active():
+        profile.discover(owned)
+        save_checkpoint()
     show_reward()
 
 func component_icon(id: String) -> String:
@@ -640,7 +876,7 @@ func component_use(id: String) -> String:
     return {"frost": "Slow movement, not enemy attacks.", "wall_charge": "Requires Bounce equipped; aim at a wall.", "delayed_blast": "Requires Explode equipped; enemies can escape the marker.", "projectile": "Your spell starts here.", "fire": "Wear down durable enemies.", "pierce": "Aim through a line of enemies.", "split": "Spread into nearby enemies.", "bounce": "Use walls for another pass.", "chain": "Connect clustered enemies.", "explode": "Strike tightly packed groups.", "cooldown": "Spend mana faster for rapid casts."}.get(id, "Recover before the next trial.")
 
 func edit_draft(action: String, index: int = -1, id: String = "") -> void:
-    if state != "reward" or not selected_reward:
+    if state not in ["reward", "practice"] or not selected_reward:
         return
     var previous_draft := draft.duplicate()
     match action:
@@ -654,15 +890,20 @@ func edit_draft(action: String, index: int = -1, id: String = "") -> void:
                 draft[index] = draft[destination]
                 draft[destination] = previous
         "add":
-            if owned.has(id) and not draft.has(id) and draft.size() < 5:
+            if owned.has(id) and not draft.has(id) and draft.size() < max_slots():
                 draft.append(id)
     if not Spell.compile(draft).valid:
         draft = previous_draft
+    if not draft.has(selected_component):
+        selected_component = draft[0]
+    if not practice:
+        save_checkpoint()
     show_reward()
 
 func show_reward() -> void:
     clear_panel()
-    label_text("TRIAL %d CLEARED · +15 health" % (encounter_index + 1), 24)
+    content.add_theme_constant_override("separation", 3)
+    label_text("PRACTICE FORGE · no run progress" if practice else "TRIAL %d CLEARED · +15 health" % (encounter_index + 1), 24)
     var catalog: Dictionary = Spell.catalog()
     if not selected_reward:
         label_text("Choose one component or recover health", 17)
@@ -677,13 +918,24 @@ func show_reward() -> void:
             card.text = ("+  RESTORE\n\nRecover %d health now (up to 25).\n\n%s" % [mini(25, int(100 - hp)), "Already at full health; no healing gained." if hp >= 100 else "Prepare for the next fight."]) if id == "restore" else "%s  %s\n\n%s\n\nMana +%d · %s" % [component_icon(id), catalog[id].name, catalog[id].description, catalog[id].cost, component_use(id)]
             card.pressed.connect(func(): choose_reward(id))
             cards.add_child(card)
-        label_text("Five slots full? Your reward stays owned. Remove a slot to equip it." if draft.size() == 5 else "Auto-equips when a slot and required components are available.", 15)
+        label_text("%s slots full? Your reward stays owned. Remove a slot to equip it." % ("Four" if max_slots() == 4 else "Five") if draft.size() == max_slots() else "Auto-equips when a slot and required components are available.", 15)
+        var inspect_row := HBoxContainer.new()
+        content.add_child(inspect_row)
+        for offer in offers:
+            if offer != "restore":
+                var inspect := Button.new()
+                inspect.text = "Inspect " + str(catalog[offer].name)
+                inspect.pressed.connect(func(): journey.inspect_reward(offer))
+                inspect_row.add_child(inspect)
+        button("Suspend to menu" if profile_enabled else "Return to menu (abandon unsaved run)", suspend_run if profile_enabled else show_menu)
+        if not journey_notice.is_empty():
+            label_text(journey_notice, 12)
         return
     label_text("SPELL FORGE · ordered slots · Projectile is fixed", 16)
     var slots := HBoxContainer.new()
     slots.add_theme_constant_override("separation", 5)
     content.add_child(slots)
-    for i in 5:
+    for i in max_slots():
         var slot := VBoxContainer.new()
         slot.custom_minimum_size.x = 142
         slots.add_child(slot)
@@ -709,7 +961,8 @@ func show_reward() -> void:
                     item.tooltip_text = "Remove Wall Charge before Bounce, or Delayed Blast before Explode."
             item.pressed.connect(func(): edit_draft(action, i))
             controls.add_child(item)
-    var row := HBoxContainer.new()
+    var row := GridContainer.new()
+    row.columns = 5
     content.add_child(row)
     for id in owned:
         if id == "projectile":
@@ -717,14 +970,14 @@ func show_reward() -> void:
         var item := Button.new()
         item.add_theme_font_size_override("font_size", 13)
         item.text = ("✓ " if draft.has(id) else "+ ") + str(catalog[id].name)
-        item.disabled = draft.has(id) or draft.size() >= 5 or not Spell.compile(draft + [id]).valid
-        item.tooltip_text = ("Equipped. " if draft.has(id) else "Owned; remove a slot to equip. " if draft.size() >= 5 else "Owned; add to next empty slot. ") + str(catalog[id].description)
-        if not draft.has(id) and not Spell.compile(draft + [id]).valid and draft.size() < 5:
+        item.disabled = draft.has(id) or draft.size() >= max_slots() or not Spell.compile(draft + [id]).valid
+        item.tooltip_text = ("Equipped. " if draft.has(id) else "Owned; remove a slot to equip. " if draft.size() >= max_slots() else "Owned; add to next empty slot. ") + str(catalog[id].description)
+        if not draft.has(id) and not Spell.compile(draft + [id]).valid and draft.size() < max_slots():
             item.tooltip_text = "Equip Bounce first." if id == "wall_charge" else "Equip Explode first."
         item.pressed.connect(func(): edit_draft("add", -1, id))
         row.add_child(item)
     var preview: Dictionary = Spell.compile(draft)
-    label_text("Mana %d / 100 · Cast delay %.2fs · Slots %d / 5 · ✓ equipped / + owned" % [preview.get("mana_cost", 0), preview.get("cooldown", 0), draft.size()], 15)
+    label_text("Mana %d / 100 · Cast delay %.2fs · Slots %d / %d · ✓ equipped / + owned" % [preview.get("mana_cost", 0), preview.get("cooldown", 0), draft.size(), max_slots()], 15)
     var explanation := label_text("%s: %s %s" % [catalog[selected_component].name, catalog[selected_component].description, component_use(selected_component)], 14)
     explanation.tooltip_text = "Impact triggers resolve left → right. Child bolts cannot trigger Split, Chain or Explode. Select a slot to inspect its effect."
     explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -749,8 +1002,21 @@ func show_reward() -> void:
     enter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     enter.modulate = Art.TEAL
     enter.disabled = not preview.valid
-    enter.pressed.connect(apply_reward)
+    enter.pressed.connect(journey.leave_practice if practice else apply_reward)
+    if practice:
+        enter.text = "Return to menu"
     actions.add_child(enter)
+    var extra := HBoxContainer.new()
+    content.add_child(extra)
+    for entry in [["Grimoire / save recipe", journey.show_grimoire], ["Experiment guide", journey.show_tutorial], ["Suspend to menu" if profile_enabled else "Abandon unsaved run", suspend_run if profile_enabled else show_menu]]:
+        if practice and entry[0] == "Suspend to menu":
+            continue
+        var item := Button.new()
+        item.text = entry[0]
+        item.pressed.connect(entry[1])
+        extra.add_child(item)
+    if not journey_notice.is_empty():
+        label_text(journey_notice, 12)
 
 func apply_reward() -> void:
     if state != "reward" or not selected_reward:
@@ -758,7 +1024,11 @@ func apply_reward() -> void:
     var candidate: Dictionary = Spell.compile(draft)
     if not candidate.valid:
         return
+    if not clear_checkpoint():
+        show_reward()
+        return
     compiled = candidate
+    report.event("spell_equipped", {"owned": owned, "equipped": draft})
     components = draft.duplicate()
     encounter_index += 1
     start_encounter()
@@ -771,12 +1041,20 @@ func toggle_pause() -> void:
         label_text("WASD / arrows: move · Mouse: aim / cast\nSpace: dodge through attacks · Esc: resume", 17)
         button("Resume", toggle_pause)
         button("Settings", func(): show_settings("paused"))
-        button("Abandon run", show_menu)
+        button("Abandon run", abandon_run)
     elif state == "paused":
         state = "combat"
         panel.hide()
 
 func finish_run(won: bool) -> void:
+    debrief = report.finish(won, encounter_index, owned, components)
+    if profile_active() and not practice:
+        profile.discover(owned)
+        if won:
+            profile.milestone(expedition + "_win")
+            if challenge == "four_slot":
+                profile.milestone("four_slot_win")
+        clear_checkpoint()
     state = "victory" if won else "death"
     effects.clear()
     pending_spawns.clear()
@@ -805,6 +1083,9 @@ func finish_run(won: bool) -> void:
         cell.add_theme_stylebox_override("panel", tile_style)
         cell.add_child(tile)
         tiles.add_child(cell)
+    if not journey_notice.is_empty():
+        label_text(journey_notice, 12)
+    button("Run report / next experiment", journey.show_debrief)
     button("Retry this seed", func(): start_run(run_seed))
     button("New run", func(): start_run(int(Time.get_unix_time_from_system())))
     button("Main menu", show_menu)

@@ -53,5 +53,8 @@ func run(game: Node) -> void:
         check(not picture.is_empty(), "rendered viewport")
         picture.save_png("user://export-smoke.png")
     check(await game.audio.shutdown(), "audio cleanup completes")
+    for fixture_path in [game.settings_path, game.profile_path, game.bindings_path]:
+        for suffix in ["", ".bak", ".tmp", ".bak.tmp"]:
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path + suffix))
     print("Export smoke: %d checks, %d failures" % [checks, failures])
     game.get_tree().quit(1 if failures else 0)
