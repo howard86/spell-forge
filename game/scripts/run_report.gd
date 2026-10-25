@@ -51,10 +51,7 @@ func event(kind: String, details: Dictionary = {}) -> void:
 	if not next_owned.has("projectile") or not _subset(next_equipped, next_owned):
 		return
 	_record_aggregates(_data, kind, details)
-	for key in ["offered", "chosen"]:
-		for id in details.get(key, []):
-			if not _data[key].has(id):
-				_data[key].append(id)
+	_record_rewards(_data, details)
 	_data.owned = next_owned.duplicate()
 	_data.equipped = next_equipped.duplicate()
 	_data.event_count += 1
@@ -124,6 +121,20 @@ func restore(value: Dictionary) -> bool:
 		evicted_denials += unretained
 	if evicted_denials > evicted_count:
 		return false
+	# Even an incomplete tail is a lower bound on lifetime observations. Starting
+	# from zero applies the same cap, without inventing missing earlier amounts.
+	for observation in OBSERVATIONS:
+		if _less_amount(float(value.observations[observation]), float(retained.observations[observation])):
+			return false
+	# Earlier saturation can consume capacity before a retained damage source is
+	# observed. Source lower bounds are only certain when the total never capped.
+	if not _same_amount(damage_total, MAX_TOTAL):
+		for source in DAMAGE_SOURCES:
+			if _less_amount(float(value.damage_sources[source]), float(retained.damage_sources[source])):
+				return false
+	for key in ["offered", "chosen"]:
+		if not _subset(retained[key], value[key]) or (evicted_count == 0 and value[key] != retained[key]):
+			return false
 	if evicted_count == 0:
 		# With complete history, every aggregate can be reconstructed under exactly
 		# the same saturation policy used while accepting events.
@@ -171,8 +182,14 @@ static func _record_aggregates(data: Dictionary, kind: String, details: Dictiona
 	if kind == "cast_denied":
 		data.cast_denials[details.reason] = mini(MAX_EXACT_INTEGER, int(data.cast_denials[details.reason]) + 1)
 
+static func _record_rewards(data: Dictionary, details: Dictionary) -> void:
+	for key in ["offered", "chosen"]:
+		for id in details.get(key, []):
+			if not data[key].has(id):
+				data[key].append(id)
+
 static func _aggregate_rows(rows: Array) -> Dictionary:
-	var data := {"observations": {}, "damage_sources": {}, "cast_denials": {}}
+	var data := {"observations": {}, "damage_sources": {}, "cast_denials": {}, "offered": [], "chosen": []}
 	for observation in OBSERVATIONS:
 		data.observations[observation] = 0.0
 	for source in DAMAGE_SOURCES:
@@ -181,7 +198,11 @@ static func _aggregate_rows(rows: Array) -> Dictionary:
 		data.cast_denials[reason] = 0
 	for row in rows:
 		_record_aggregates(data, row.kind, row.details)
+		_record_rewards(data, row.details)
 	return data
+
+static func _less_amount(first: float, second: float) -> bool:
+	return first < second and not _same_amount(first, second)
 
 static func _same_amount(first: float, second: float) -> bool:
 	var tolerance := maxf(AGGREGATE_ABSOLUTE_TOLERANCE, maxf(first, second) * AGGREGATE_RELATIVE_TOLERANCE)

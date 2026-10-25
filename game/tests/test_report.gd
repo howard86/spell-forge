@@ -199,5 +199,37 @@ func _initialize() -> void:
 	var impossible_evicted_denials: Dictionary = rolled_state.duplicate(true)
 	impossible_evicted_denials.cast_denials.mana = rolled_state.event_count - rolled_state.events.size() + 1
 	check(not rolled_history.restore(impossible_evicted_denials) and rolled_history.snapshot() == rolled_state, "Unretained denials cannot exceed the number of evicted events")
+	var reward_history = Report.new()
+	reward_history.event("reward_offered", {"offered": ["fire", "restore"]})
+	reward_history.event("reward_chosen", {"chosen": ["fire"]})
+	var reward_state: Dictionary = reward_history.snapshot()
+	for summary in ["offered", "chosen"]:
+		var erased_rewards: Dictionary = reward_state.duplicate(true)
+		erased_rewards[summary] = []
+		check(not reward_history.restore(erased_rewards) and reward_history.snapshot() == reward_state, "Complete history rejects erased %s rewards atomically" % summary)
+	for index in range(Report.MAX_EVENTS):
+		reward_history.event("sample")
+	check(coherent.restore(reward_history.snapshot()), "Evicted reward history preserves its valid lifetime summaries")
+	reward_history.event("reward_chosen", {"chosen": ["restore"]})
+	var missing_retained_reward: Dictionary = reward_history.snapshot()
+	missing_retained_reward.chosen = ["fire"]
+	check(not coherent.restore(missing_retained_reward), "Rollover cannot erase retained reward facts")
+	var observation_tail = Report.new()
+	for index in range(Report.MAX_EVENTS):
+		observation_tail.event("sample")
+	for observation in Report.OBSERVATIONS:
+		observation_tail.event(observation, {"amount": 10.0, "source": "lane"} if observation == "damage_taken" else {"amount": 10.0})
+	var tail_state: Dictionary = observation_tail.snapshot()
+	check(coherent.restore(JSON.parse_string(JSON.stringify(tail_state))), "Unaltered observation tail remains restorable after rollover")
+	for observation in Report.OBSERVATIONS:
+		var missing_observation: Dictionary = tail_state.duplicate(true)
+		missing_observation.observations[observation] = 0.0
+		if observation == "damage_taken":
+			missing_observation.damage_sources.lane = 0.0
+		check(not observation_tail.restore(missing_observation) and observation_tail.snapshot() == tail_state, "Rollover cannot erase retained positive %s observations" % observation)
+	var shifted_tail_source: Dictionary = tail_state.duplicate(true)
+	shifted_tail_source.damage_sources.lane = 0.0
+	shifted_tail_source.damage_sources.contact = 10.0
+	check(not observation_tail.restore(shifted_tail_source), "Unsaturated rollover cannot reassign retained damage sources")
 	print("Run report: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
