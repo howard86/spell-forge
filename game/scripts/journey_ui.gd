@@ -8,6 +8,47 @@ var page: VBoxContainer
 var practice_backup: Dictionary = {}
 var return_action: Callable
 
+func setup_controls() -> void:
+    game.next_setup.configured = true
+    var row := HBoxContainer.new()
+    game.content.add_child(row)
+    for spec in [["expedition", ["forge", "archive"], ["Forge · Warden", "Archive · Archivist"]], ["challenge", ["standard", "four_slot"], ["Standard · 5 slots", "Four-slot challenge"]], ["starting_choice", ["ember", "frost"], ["Ember · Fire", "Frost · slow"]]]:
+        var picker := OptionButton.new()
+        for title in spec[2]:
+            picker.add_item(title)
+        picker.select(spec[1].find(game.next_setup[spec[0]]))
+        picker.item_selected.connect(func(index: int): game.next_setup[spec[0]] = spec[1][index])
+        row.add_child(picker)
+    game.label_text("Forge begins on open floor; choose each later route in the forge. Archive always has reflector cover.", 12)
+
+func route_controls() -> void:
+    if game.practice:
+        return
+    var row := HBoxContainer.new()
+    game.content.add_child(row)
+    var description := Label.new()
+    description.add_theme_font_size_override("font_size", 12)
+    if game.expedition == "archive":
+        game.route = "reflector"
+        description.text = "ARCHIVE · Reflector rooms: cover and bank shots, narrower paths."
+    else:
+        var picker := OptionButton.new()
+        picker.add_item("Next: Open floor")
+        picker.add_item("Next: Reflector route")
+        picker.select(1 if game.route == "reflector" else 0)
+        picker.item_selected.connect(func(index: int):
+            game.route = "reflector" if index == 1 else "open"
+            game.save_checkpoint()
+            game.show_reward())
+        row.add_child(picker)
+        description.text = "More room to move." if game.route == "open" else "Cover and bank shots, narrower paths. No reward bonus."
+    row.add_child(description)
+    var next_room: Dictionary = game.Director.encounter(game.run_seed, game.encounter_index + 1, game.expedition, game.route)
+    var map_text := "Next map: open floor; no internal walls."
+    if not next_room.obstacles.is_empty():
+        map_text = "Next map: two west/east pillars, with paths above, below and through the center." if next_room.layout != 1 else "Next map: north/south horizontal walls; clear center lane and paths around both ends."
+    game.label_text(map_text, 12)
+
 func page_start(title: String) -> void:
     game.clear_panel()
     game.label_text(title, 25)
@@ -58,6 +99,8 @@ func add_preview(equipped: Array, candidate: Array) -> void:
     source.profile_enabled = false
     source.components = equipped.duplicate(true)
     source.draft = candidate.duplicate(true)
+    source.challenge = game.challenge
+    source.obstacles = [] if game.practice else game.obstacles.duplicate()
     var preview := Preview.new()
     preview.source = source
     preview.name = "JourneyPreview"
@@ -71,9 +114,10 @@ func show_practice() -> void:
     if not game.practice:
         practice_backup = {"owned": game.owned.duplicate(), "components": game.components.duplicate(),
             "draft": game.draft.duplicate(), "selected_component": game.selected_component,
-            "challenge": game.challenge, "selected_reward": game.selected_reward}
+            "challenge": game.challenge, "selected_reward": game.selected_reward, "obstacles": game.obstacles.duplicate()}
         game.practice = true
         game.challenge = "standard"
+        game.obstacles = []
         game.owned = Spell.catalog().keys()
         game.components = ["projectile"]
         game.draft = ["projectile"]
@@ -197,7 +241,7 @@ func show_code(code: String, back: Callable) -> void:
     field.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
     field.custom_minimum_size = Vector2(700, 160)
     page.add_child(field)
-    text("Share manually wherever you choose. Recipe codes never grant components; challenges configure the next run.")
+    text("Share manually wherever you choose. Challenges repeat seed, expedition, slot limit and starter. Route and reward choices are made during play and may differ.")
     game.button("Back", back)
 
 func import_code(value: String) -> bool:

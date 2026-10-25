@@ -35,7 +35,7 @@ jobs:
         run: godot --headless --path game --script res://tests/test_stress.gd
       - name: Test roadmap features
         run: |
-          for suite in report registry profile sharing preview journey; do
+          for suite in report registry profile sharing preview journey geometry world_runtime; do
             godot --headless --path game --script "res://tests/test_$suite.gd" --log-file "/tmp/spellforge-$suite.log"
             if grep -E 'SCRIPT ERROR:|ERROR:|ObjectDB instances.*leaked' "/tmp/spellforge-$suite.log"; then exit 1; fi
             grep -E '[0-9]+ checks, 0 failures' "/tmp/spellforge-$suite.log"
@@ -77,7 +77,7 @@ jobs:
           Invoke-WebRequest 'https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip' -OutFile $archive
           Expand-Archive $archive -DestinationPath $editorDir
           $editor = Join-Path $editorDir 'Godot_v4.7.2-stable_win64_console.exe'
-          foreach ($suite in @('spells', 'run', 'director', 'balance', 'controls', 'ui', 'stress', 'report', 'registry', 'profile', 'sharing', 'preview', 'journey')) {
+          foreach ($suite in @('spells', 'run', 'director', 'balance', 'controls', 'ui', 'stress', 'report', 'registry', 'profile', 'sharing', 'preview', 'journey', 'geometry', 'world_runtime')) {
             $log = Join-Path $env:RUNNER_TEMP "spellforge-$suite.log"
             & $editor --headless --path game --script "res://tests/test_$suite.gd" --log-file $log
             if ($LASTEXITCODE -ne 0) { throw "$suite exited with code $LASTEXITCODE" }

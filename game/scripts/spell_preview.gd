@@ -1,4 +1,6 @@
 extends Control
+const Geometry = preload("res://scripts/arena_geometry.gd")
+const RADIAL_ARENA := Rect2(32, 88, 896, 416)
 ## A detached game instance runs the same projectile/collision/effect code.
 ## It never enters the tree, reads input, advances the run, or shares mutable state.
 const Art = preload("res://scripts/presentation.gd")
@@ -17,6 +19,7 @@ var report := ""
 var comparison: Dictionary = {}
 var scenario := "cluster"
 var picker: OptionButton
+var terrain: Array = []
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_PASS
@@ -36,25 +39,31 @@ func _ready() -> void:
 
 ## One legal compiled cast at t=0, followed for exactly 120 fixed ticks.
 ## No regeneration, repeat casts, targeting AI, settings/profile I/O, or live state.
-static func evaluate(live_source: Node, components: Array, mode: String = "group") -> Dictionary:
+static func evaluate(live_source: Node, components: Array, mode: String = "group", terrain_copy: Array = []) -> Dictionary:
     var spell: Dictionary = Spell.compile(components.duplicate(true))
     var fixture: Dictionary = Scenarios.fixture(mode)
     var result := {"valid": false, "damage": 0.0, "mana_cost": float(spell.mana_cost),
         "cooldown": float(spell.cooldown), "horizon": HORIZON, "frames": [],
         "scenario": fixture.get("id", mode), "description": fixture.get("description", "Unknown scenario."),
-        "kills": 0, "targets": [], "casts": 0, "error": "",
+        "kills": 0, "targets": [], "casts": 0, "error": "", "obstacles": terrain_copy.duplicate(),
         "assumptions": "Fresh 100 mana; one cast at t=0; 2s observation; no repeat casts or mana regeneration. Burn after the horizon is excluded."}
+    var slot_limit := int(live_source.max_slots()) if is_instance_valid(live_source) else 5
+    if components.size() > slot_limit:
+        result.error = "Draft exceeds this challenge's slot limit."
+        return result
     if not spell.valid or fixture.is_empty() or not is_instance_valid(live_source) or live_source.get_script() == null:
         result.error = spell.error if not spell.valid else "Unknown scenario or unavailable source."
         return result
     var sandbox = live_source.get_script().new()
     sandbox.state = "combat"
+    sandbox.obstacles = terrain_copy.duplicate()
+    result.description = "Test scenario" + (" with copied terrain (not a room rehearsal). " if not terrain_copy.is_empty() else " on open floor. ") + result.description
     sandbox.compiled = spell
     sandbox.audio = SilentAudio.new()
     sandbox.mana = 100.0
     sandbox.cooldown = 0.0
     sandbox.cast_id = 0
-    sandbox.player_pos = fixture.origin - fixture.direction * 18
+    sandbox.player_pos = sandbox.Geometry.safe_position(fixture.origin - fixture.direction * 18, 14, sandbox.ARENA, sandbox.obstacles)
     sandbox.aim = fixture.direction
     for entry in fixture.targets:
         sandbox.spawn_enemy(entry.kind, entry.position, 99)
@@ -75,7 +84,9 @@ static func evaluate(live_source: Node, components: Array, mode: String = "group
                 sandbox.hurt_enemy(enemy, enemy.burn.dps * active, false)
                 if sandbox.elapsed >= enemy.burn.expires_at:
                     enemy.burn = {}
+            var previous: Vector2 = enemy.position
             Scenarios.advance(enemy, STEP, sandbox.elapsed)
+            enemy.position = sandbox.Geometry.move_circle(previous, enemy.position - previous, enemy.radius, sandbox.ARENA, sandbox.obstacles)
         sandbox.update_delayed_blasts(STEP)
         sandbox.update_projectiles(STEP)
         sandbox.update_effects(STEP)
@@ -98,8 +109,9 @@ func outcome_text(label: String, outcome: Dictionary) -> String:
 
 func restart(mode: String = "group") -> void:
     frame_time = 0.0
-    var equipped := evaluate(source, source.components if is_instance_valid(source) else [], mode)
-    var draft_result := evaluate(source, source.draft if is_instance_valid(source) else [], mode)
+    terrain = source.obstacles.duplicate() if is_instance_valid(source) else []
+    var equipped := evaluate(source, source.components if is_instance_valid(source) else [], mode, terrain)
+    var draft_result := evaluate(source, source.draft if is_instance_valid(source) else [], mode, terrain)
     comparison = {"equipped": equipped, "draft": draft_result}
     scenario = draft_result.scenario
     frames = draft_result.frames
@@ -119,19 +131,24 @@ func point(value: Vector2) -> Vector2:
     return Vector2(12 + (value.x - 32) / 896 * (size.x - 24), 51 + (value.y - 300) * 0.12)
 func blast_boundary(origin: Vector2, radius: float) -> PackedVector2Array:
     var boundary := PackedVector2Array()
-    for i in 33:
-        var angle := TAU * i / 32.0
-        boundary.append(point(origin + Vector2(cos(angle), sin(angle)) * radius))
+    for vertex: Vector2 in Geometry.radial_boundary(origin, radius, RADIAL_ARENA, terrain):
+        boundary.append(point(vertex))
     return boundary
 func _draw() -> void:
     draw_rect(Rect2(Vector2.ZERO, size), Art.STONE.darkened(0.3))
     var lines := report.split("\n")
+    var report_x := picker.position.x + picker.size.x + 8 if is_instance_valid(picker) else 148.0
     for i in lines.size():
-        draw_string(ThemeDB.fallback_font, Vector2(132, 13 + i * 14), lines[i], HORIZONTAL_ALIGNMENT_LEFT, size.x - 140, 12, Art.TEAL)
+        draw_string(ThemeDB.fallback_font, Vector2(report_x, 13 + i * 14), lines[i], HORIZONTAL_ALIGNMENT_LEFT, size.x - report_x - 8, 12, Art.TEAL)
     draw_string(ThemeDB.fallback_font, Vector2(7, 41), "1 cast · 2s", HORIZONTAL_ALIGNMENT_LEFT, 100, 11, Art.TEAL)
     draw_line(Vector2(size.x - 12, 24), Vector2(size.x - 12, size.y - 4), Art.GOLD, 2)
     if frames.is_empty():
         return
+    for block: Rect2 in terrain:
+        var top_left := point(block.position)
+        var bottom_right := point(block.end)
+        draw_rect(Rect2(top_left, bottom_right - top_left), Art.EDGE)
+        draw_rect(Rect2(top_left, bottom_right - top_left), Art.GOLD, false, 1)
     var frame: Dictionary = frames[mini(int(frame_time * 60), frames.size() - 1)]
     for enemy in frame.enemies:
         var pos := point(enemy.position)
@@ -145,9 +162,13 @@ func _draw() -> void:
         if projectile.get("wall_charge", false) and projectile.get("wall_charged", false):
             draw_arc(point(projectile.position), 5, 0, TAU, 12, Art.GOLD, 1)
     for blast in frame.blasts:
-        draw_polyline(blast_boundary(blast.position, float(blast.radius)), Art.GOLD, 1)
+        var footprint := blast_boundary(blast.position, float(blast.radius))
+        if footprint.size() >= 2:
+            draw_polyline(footprint, Art.GOLD, 1)
     for effect in frame.effects:
         if effect.kind == "chain":
             draw_line(point(effect.origin), point(effect.target), Art.TEAL, 2)
         else:
-            draw_polyline(blast_boundary(effect.origin, float(effect.radius)), Art.GOLD, 2)
+            var footprint := blast_boundary(effect.origin, float(effect.radius))
+            if footprint.size() >= 2:
+                draw_polyline(footprint, Art.GOLD, 2)

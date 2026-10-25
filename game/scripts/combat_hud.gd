@@ -11,7 +11,6 @@ func bar(rect: Rect2, value: float, color: Color) -> void:
     draw_rect(Rect2(rect.position, Vector2(rect.size.x * clampf(value, 0, 1), rect.size.y)), color)
 func _draw() -> void:
     if game.state == "menu":
-        text_at("SPELLFORGE / THE RUNIC TRIALS", Vector2(36, 35))
         return
     text_at("HEALTH  %d / 100" % game.hp, Vector2(36, 22), Art.RED)
     bar(Rect2(36, 29, 180, 8), game.hp / 100.0, Art.RED)
@@ -39,14 +38,14 @@ func _draw() -> void:
         text_at(str(i + 1), pos + Vector2(7, 16), Art.TEAL if i < progress.cleared else Art.GOLD, 13)
     var emblem := Vector2(879, 19)
     draw_colored_polygon(PackedVector2Array([emblem + Vector2(0, -12), emblem + Vector2(12, 0), emblem + Vector2(0, 12), emblem + Vector2(-12, 0)]), Art.GOLD if game.encounter_index == 6 else Art.EDGE)
-    text_at("W", emblem + Vector2(-6, 5), Art.INK, 14)
+    text_at("A" if game.expedition == "archive" else "W", emblem + Vector2(-6, 5), Art.INK, 14)
     var boss: Dictionary = {}
     for enemy in game.enemies:
-        if enemy.kind == "boss" and enemy.hp > 0:
+        if enemy.kind in ["boss", "archivist"] and enemy.hp > 0:
             boss = enemy
             break
     if not boss.is_empty():
-        text_at("WARDEN" + (" · ENRAGED" if boss.phase == 2 else ""), Vector2(666, 49), Art.RED if boss.phase == 2 else Art.GOLD, 15)
+        text_at(("ARCHIVIST" if boss.kind == "archivist" else "WARDEN") + (" · ENRAGED" if boss.phase == 2 else ""), Vector2(666, 49), Art.RED if boss.phase == 2 else Art.GOLD, 15)
         bar(Rect2(666, 56, 258, 9), boss.hp / boss.max_hp, Art.RED)
         draw_line(Vector2(795, 53), Vector2(795, 68), Art.GOLD, 2)
         text_at("%d / %d" % [maxf(0, boss.hp), boss.max_hp], Vector2(666, 81), Art.GOLD, 12)
