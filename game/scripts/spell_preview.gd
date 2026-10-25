@@ -1,8 +1,8 @@
 extends Control
-const Geometry = preload("res://scripts/arena_geometry.gd")
-const RADIAL_ARENA := Rect2(32, 88, 896, 416)
 ## A detached game instance runs the same projectile/collision/effect code.
 ## It never enters the tree, reads input, advances the run, or shares mutable state.
+const Geometry = preload("res://scripts/arena_geometry.gd")
+const RADIAL_ARENA := Rect2(32, 88, 896, 416)
 const Art = preload("res://scripts/presentation.gd")
 class SilentAudio extends Node:
     func play_sfx(_kind: String) -> void:
@@ -12,6 +12,7 @@ const Scenarios = preload("res://scripts/preview_scenarios.gd")
 const STEP := 1.0 / 60.0
 const TICKS := 120
 const HORIZON := 2.0
+var experiment_id := ""
 var source: Node
 var frames: Array = []
 var frame_time := 0.0
@@ -35,11 +36,11 @@ func _ready() -> void:
     visibility_changed.connect(func():
         if not is_visible_in_tree():
             set_process(false))
-    restart()
+    restart(scenario if experiment_id != "" else "group")
 
 ## One legal compiled cast at t=0, followed for exactly 120 fixed ticks.
 ## No regeneration, repeat casts, targeting AI, settings/profile I/O, or live state.
-static func evaluate(live_source: Node, components: Array, mode: String = "group", terrain_copy: Array = []) -> Dictionary:
+static func evaluate(live_source: Node, components: Array, mode: String = "group", terrain_copy: Array = [], experiment: String = "") -> Dictionary:
     var spell: Dictionary = Spell.compile(components.duplicate(true))
     var fixture: Dictionary = Scenarios.fixture(mode)
     var result := {"valid": false, "damage": 0.0, "mana_cost": float(spell.mana_cost),
@@ -48,17 +49,26 @@ static func evaluate(live_source: Node, components: Array, mode: String = "group
         "kills": 0, "targets": [], "casts": 0, "error": "", "obstacles": terrain_copy.duplicate(),
         "assumptions": "Fresh 100 mana; one cast at t=0; 2s observation; no repeat casts or mana regeneration. Burn after the horizon is excluded."}
     var slot_limit := int(live_source.max_slots()) if is_instance_valid(live_source) else 5
-    if components.size() > slot_limit:
+    if components.size() + int(experiment == "repulse") > slot_limit:
         result.error = "Draft exceeds this challenge's slot limit."
         return result
     if not spell.valid or fixture.is_empty() or not is_instance_valid(live_source) or live_source.get_script() == null:
         result.error = spell.error if not spell.valid else "Unknown scenario or unavailable source."
         return result
-    var sandbox = live_source.get_script().new()
+    if experiment != "" and experiment not in ["frost_split_order", "split_spread", "repulse"]:
+        result.error = "Unknown experiment: " + experiment
+        return result
+    var sandbox = live_source.get_script().new() if experiment == "" else load("res://scripts/experimental_spell_runtime.gd").new()
     sandbox.state = "combat"
     sandbox.obstacles = terrain_copy.duplicate()
     result.description = "Test scenario" + (" with copied terrain (not a room rehearsal). " if not terrain_copy.is_empty() else " on open floor. ") + result.description
     sandbox.compiled = spell
+    if experiment != "":
+        if not sandbox.configure_experiment(experiment):
+            result.error = "Experiment rejected: Repulse needs one free slot (maximum five total)."
+            sandbox.free()
+            return result
+        result.mana_cost = sandbox.compiled.mana_cost
     sandbox.audio = SilentAudio.new()
     sandbox.mana = 100.0
     sandbox.cooldown = 0.0
@@ -111,11 +121,11 @@ func restart(mode: String = "group") -> void:
     frame_time = 0.0
     terrain = source.obstacles.duplicate() if is_instance_valid(source) else []
     var equipped := evaluate(source, source.components if is_instance_valid(source) else [], mode, terrain)
-    var draft_result := evaluate(source, source.draft if is_instance_valid(source) else [], mode, terrain)
+    var draft_result := evaluate(source, source.draft if is_instance_valid(source) else [], mode, terrain, experiment_id)
     comparison = {"equipped": equipped, "draft": draft_result}
     scenario = draft_result.scenario
     frames = draft_result.frames
-    report = outcome_text("Equipped", equipped) + "\n" + outcome_text("Draft", draft_result)
+    report = outcome_text("Equipped" if experiment_id == "" else "Baseline", equipped) + "\n" + outcome_text("Draft" if experiment_id == "" else "Prototype", draft_result)
     tooltip_text = str(draft_result.description) + "\n" + str(draft_result.assumptions) + "\nAnimation shows draft; equipped uses the identical setup. Run unaffected."
     if is_instance_valid(picker) and scenario in Scenarios.IDS:
         picker.select(Scenarios.IDS.find(scenario))
