@@ -25,6 +25,21 @@ func run() -> void:
     game = scene
     scene.set_physics_process(false)
     scene.settings.shake = false
+    await capture("menu")
+    scene.journey.show_practice()
+    await capture("practice")
+    var lab = load("res://scripts/spell_lab.gd").new()
+    lab.open(scene)
+    await capture("spell-lab")
+    lab.close()
+    await process_frame
+    scene.journey.leave_practice()
+    scene.journey.show_tutorial()
+    await capture("tutorial")
+    scene.journey.show_workshop()
+    await capture("workshop")
+    scene.journey.show_sharing()
+    await capture("sharing")
     scene.start_run(4242)
     scene.update_hud()
     await capture("combat")
@@ -67,7 +82,19 @@ func run() -> void:
     scene.elapsed = 125
     scene.finish_run(true)
     await capture("victory")
+    scene.start_run(4242, {"expedition": "archive", "challenge": "standard", "starting_choice": "ember"})
+    scene.update_hud()
+    await capture("archive-terrain")
+    scene.encounter_index = 6
+    scene.start_encounter()
+    scene.enemies[0].hp = 400
+    scene.update_enemies(0)
+    scene.update_hud()
+    await capture("archivist")
     await scene.audio.shutdown()
+    for fixture_path in [scene.settings_path, scene.profile_path, scene.bindings_path]:
+        for suffix in ["", ".bak", ".tmp", ".bak.tmp"]:
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path + suffix))
     scene.queue_free()
     await process_frame
     quit()

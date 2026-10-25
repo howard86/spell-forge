@@ -45,6 +45,22 @@ func run(game: Node) -> void:
     game.start_run(4242)
     check(game.hp == 100 and game.kills == 0 and game.state == "combat", "retry reset")
     game.cast_spell()
+    game.start_run(4242, {"expedition": "archive", "challenge": "standard", "starting_choice": "ember"})
+    check(game.expedition == "archive" and not game.obstacles.is_empty(), "packaged Archive terrain")
+    game.encounter_index = 6
+    game.start_encounter()
+    check(game.enemies.size() == 1 and game.enemies[0].kind == "archivist", "packaged Archivist encounter")
+    game.journey.show_practice()
+    check(game.practice and game.owned.size() == game.Spell.catalog().size(), "packaged practice catalog")
+    var lab = load("res://scripts/spell_lab.gd").new()
+    lab.open(game)
+    await game.get_tree().process_frame
+    check(lab.preview.comparison.draft.valid, "packaged experimental preview")
+    lab.close()
+    await game.get_tree().process_frame
+    game.journey.leave_practice()
+    check(not game.practice, "packaged practice returns safely")
+    game.start_run(4242)
     game.update_hud()
     game.queue_redraw()
     await game.get_tree().create_timer(0.25).timeout

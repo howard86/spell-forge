@@ -254,7 +254,11 @@ func deny_cast(reason: String) -> void:
 func _ready() -> void:
     get_tree().auto_accept_quit = false
     var smoke_test := OS.is_debug_build() and "--smoke-test" in OS.get_cmdline_user_args()
-    if smoke_test:
+    var performance_probe := OS.is_debug_build() and "--performance-probe" in OS.get_cmdline_user_args()
+    if performance_probe:
+        settings_path = "user://runtime-probe-%d.cfg" % Time.get_ticks_usec()
+        profile_enabled = false
+    elif smoke_test:
         settings_path = "user://export-smoke-%d.cfg" % Time.get_ticks_usec()
     if settings_path != "user://settings.cfg":
         if profile_path == "user://profile.json":
@@ -313,8 +317,13 @@ func _ready() -> void:
         theme.set_stylebox("focus", kind, focus)
     panel.theme = theme
     show_menu()
-    if smoke_test:
+    if performance_probe:
+        call_deferred("run_performance_probe")
+    elif smoke_test:
         call_deferred("run_export_smoke")
+
+func run_performance_probe() -> void:
+    await preload("res://scripts/runtime_probe.gd").new().run(self)
 
 func run_export_smoke() -> void:
     await preload("res://scripts/export_smoke.gd").new().run(self)
