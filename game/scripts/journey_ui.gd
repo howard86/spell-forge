@@ -67,7 +67,7 @@ func text(value: String) -> Label:
     item.text = value
     item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    item.add_theme_font_size_override("font_size", 15)
+    item.add_theme_font_size_override("font_size", 19 if game.settings.large_text else 15)
     page.add_child(item)
     return item
 
@@ -159,7 +159,9 @@ func show_grimoire() -> void:
     var name := LineEdit.new()
     name.placeholder_text = "Recipe name (up to 40 characters)"
     name.max_length = 40
+    name.text = "My spell"
     page.add_child(name)
+    action("Name with controller", func(): game.open_entry(name, "recipe"))
     action("Save current draft", func():
         game.save_recipe(name.text, game.draft)
         show_grimoire())
@@ -255,6 +257,9 @@ func import_code(value: String) -> bool:
             return false
         game.journey_notice = "Recipe imported; inventory unchanged."
         return true
+    game.menu_seed_text = str(int(payload.seed))
+    if is_instance_valid(game.seed_input) and game.seed_input.is_inside_tree():
+        game.seed_input.text = game.menu_seed_text
     game.next_setup = {"seed": int(payload.seed), "expedition": payload.expedition, "challenge": payload.challenge, "starting_choice": payload.starting_choice, "seed_set": true, "configured": true}
     game.journey_notice = "Next run configured: seed %d · %s · %s · %s. Begin run from the menu to start it." % [payload.seed, payload.expedition, payload.challenge, payload.starting_choice]
     return true
@@ -263,16 +268,22 @@ func show_sharing() -> void:
     game.state = "sharing"
     page_start("SHARE / IMPORT · next run setup")
     text("Current next setup: %s · %s · %s. A pasted challenge changes the next setup, never a running game." % [game.next_setup.expedition, game.next_setup.challenge, game.next_setup.starting_choice])
+    text("Pending seed: " + (game.menu_seed_text if not game.menu_seed_text.strip_edges().is_empty() else "imported %d" % int(game.next_setup.seed) if game.next_setup.get("seed_set", false) else "new adventure; exporting selects a seed"))
     var field := LineEdit.new()
     field.placeholder_text = "Paste SF1 recipe or challenge code (maximum 4096 characters)"
     field.max_length = 4096
     page.add_child(field)
+    action("Enter code with controller", func(): game.open_entry(field, "share"))
     action("Import code", func(): import_code(field.text); show_sharing())
     action("Export next challenge", func():
-        var seed_value: int = int(game.next_setup.seed)
-        if not game.next_setup.get("seed_set", false):
-            seed_value = game.run_seed
-        show_code(Share.encode_challenge(seed_value, game.next_setup.expedition, game.next_setup.challenge, game.next_setup.starting_choice), show_sharing))
+        var pending: Dictionary = game.pending_seed()
+        if not pending.valid:
+            game.reject_seed()
+            show_sharing()
+            return
+        # Freeze a newly generated blank seed so the exported challenge matches Begin run.
+        game.menu_seed_text = str(pending.seed)
+        show_code(Share.encode_challenge(pending.seed, game.next_setup.expedition, game.next_setup.challenge, game.next_setup.starting_choice), show_sharing))
     for starter in ["ember", "frost"]:
         action("Next starting spell: " + starter.capitalize(), func():
             game.next_setup.starting_choice = starter

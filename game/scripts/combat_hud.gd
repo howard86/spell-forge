@@ -22,8 +22,8 @@ func _draw() -> void:
     text_at("Cost %d" % cost, Vector2(238, 55), Art.GOLD, 13)
     var ready: Dictionary = game.readiness()
     text_at("CAST  " + ("READY" if ready.cast else ("%.1fs" % game.cooldown if game.cooldown > 0 else "BOLTS ACTIVE" if game.projectiles.size() >= game.MAX_PROJECTILES else "LOW MANA")), Vector2(442, 22), Art.TEAL if ready.cast else Art.GOLD)
-    text_at("SPACE  " + ("DODGE READY" if ready.dodge else "%.1fs" % game.dodge_cooldown), Vector2(442, 45), Art.TEAL if ready.dodge else Art.GOLD)
-    text_at("[Esc] Pause", Vector2(36, 58), Art.EDGE.lightened(0.5), 13)
+    text_at(game.control_hint("dodge") + "  " + ("DODGE READY" if ready.dodge else "%.1fs" % game.dodge_cooldown), Vector2(442, 45), Art.TEAL if ready.dodge else Art.GOLD)
+    text_at("Pause: " + game.control_hint("pause"), Vector2(36, 58), Art.EDGE.lightened(0.5), 13)
     text_at(" → ".join(game.components).to_upper(), Vector2(36, 78), Art.GOLD, 14)
     if game.resource_notice_time > 0:
         text_at(game.resource_notice, Vector2(520, 527), Art.GOLD, 14)

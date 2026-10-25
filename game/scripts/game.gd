@@ -52,13 +52,26 @@ var resource_notice_time := 0.0
 var message := ""
 var message_time := 0.0
 var settings_path := "user://settings.cfg"
-var settings := {"master": 0.7, "music": 0.35, "sfx": 0.7, "shake": true, "reduced_flash": false}
+const Bindings = preload("res://scripts/input_bindings.gd")
+const Navigation = preload("res://scripts/menu_navigation.gd")
+const TextEntry = preload("res://scripts/text_entry.gd")
+var bindings = Bindings.new()
+var back_action: Callable
+var capture_action := ""
+var settings_return := "menu"
+var stick_aim := false
+var controller_device := false
+var suppress_combat := false
+var menu_scroll: ScrollContainer
+var focus_text := ""
+var settings := {"master": 0.7, "music": 0.35, "sfx": 0.7, "shake": true, "reduced_flash": false, "large_text": false}
 var ui: CanvasLayer
 var panel: PanelContainer
 var content: VBoxContainer
 var hud: Control
 var audio: Node
 var seed_input: LineEdit
+var menu_seed_text := ""
 var exit_requested := false
 var profile_path := "user://profile.json"
 var bindings_path := "user://bindings.json"
@@ -205,18 +218,25 @@ func reject_seed() -> void:
     if state == "menu":
         show_menu()
 
-func begin_from_menu() -> void:
-    var value := seed_input.text.strip_edges()
+func pending_seed() -> Dictionary:
+    if is_instance_valid(seed_input) and seed_input.is_inside_tree():
+        menu_seed_text = seed_input.text
+    var value := menu_seed_text.strip_edges()
     if value.is_empty():
-        begin_setup_run(int(next_setup.seed) if next_setup.get("seed_set", false) else int(Time.get_unix_time_from_system()))
-        return
+        return {"valid": true, "seed": int(next_setup.seed) if next_setup.get("seed_set", false) else int(Time.get_unix_time_from_system())}
     var digits := value.trim_prefix("-").trim_prefix("+")
     while digits.begins_with("0"):
         digits = digits.trim_prefix("0")
     if not value.is_valid_int() or digits.length() > 16 or (digits.length() == 16 and digits > "9007199254740991"):
+        return {"valid": false}
+    return {"valid": true, "seed": int(value)}
+
+func begin_from_menu() -> void:
+    var result := pending_seed()
+    if not result.valid:
         reject_seed()
         return
-    begin_setup_run(int(value))
+    begin_setup_run(result.seed)
 
 func begin_setup_run(seed_value: int) -> void:
     start_run(seed_value, next_setup if next_setup.get("configured", false) else {})
@@ -246,6 +266,13 @@ func _ready() -> void:
         storage_problem = profile.storage_problem
         journey_notice = profile.notice
     journey.game = self
+    bindings.path = bindings_path
+    bindings.install_defaults()
+    var menu_buttons := {"ui_accept": JOY_BUTTON_A, "ui_cancel": JOY_BUTTON_B, "ui_left": JOY_BUTTON_DPAD_LEFT, "ui_right": JOY_BUTTON_DPAD_RIGHT, "ui_up": JOY_BUTTON_DPAD_UP, "ui_down": JOY_BUTTON_DPAD_DOWN}
+    for action in menu_buttons:
+        Bindings._button(action, menu_buttons[action])
+    if not bindings.load_bindings():
+        journey_notice = bindings.notice
     load_settings()
     audio = Art.create_audio()
     add_child(audio)
@@ -270,7 +297,20 @@ func _ready() -> void:
     ui.add_child(panel)
     content = VBoxContainer.new()
     content.add_theme_constant_override("separation", 5)
-    panel.add_child(content)
+    menu_scroll = ScrollContainer.new()
+    menu_scroll.custom_minimum_size = Vector2(764, 400)
+    menu_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    panel.add_child(menu_scroll)
+    content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    menu_scroll.add_child(content)
+    var theme := Theme.new()
+    var focus := StyleBoxFlat.new()
+    focus.bg_color = Color(0, 0, 0, 0)
+    focus.border_color = Color.WHITE
+    focus.set_border_width_all(3)
+    for kind in ["Button", "CheckButton", "OptionButton", "LineEdit", "TextEdit", "HSlider"]:
+        theme.set_stylebox("focus", kind, focus)
+    panel.theme = theme
     show_menu()
     if smoke_test:
         call_deferred("run_export_smoke")
@@ -279,10 +319,17 @@ func run_export_smoke() -> void:
     await preload("res://scripts/export_smoke.gd").new().run(self)
 
 func clear_panel() -> void:
+    var focused := get_viewport().gui_get_focus_owner()
+    focus_text = focused.text if focused is Button else ""
+    back_action = Callable()
+    capture_action = ""
+    suppress_combat = true
+    call_deferred("finish_menu")
     for child in content.get_children():
         content.remove_child(child)
         child.queue_free()
-    panel.position.y = 94
+    menu_scroll.scroll_vertical = 0
+    panel.position.y = 28
     panel.size = Vector2(800, 340)
     content.add_theme_constant_override("separation", 5)
     var surface = panel.get_theme_stylebox("panel").duplicate()
@@ -293,7 +340,8 @@ func clear_panel() -> void:
 func label_text(value: String, size: int = 18) -> Label:
     var label := Label.new()
     label.text = value
-    label.add_theme_font_size_override("font_size", size)
+    label.add_theme_font_size_override("font_size", maxi(size, 19) if settings.large_text else size)
+    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     content.add_child(label)
     return label
@@ -301,8 +349,11 @@ func label_text(value: String, size: int = 18) -> Label:
 func button(value: String, action: Callable, tip: String = "") -> Button:
     var item := Button.new()
     item.text = value
+    item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     item.tooltip_text = tip
     item.pressed.connect(action)
+    if value.begins_with("Back") or value in ["Skip guide", "Main menu"]:
+        back_action = action
     content.add_child(item)
     return item
 
@@ -318,9 +369,14 @@ func show_menu() -> void:
     journey.setup_controls()
     seed_input = LineEdit.new()
     seed_input.max_length = 32
-    seed_input.placeholder_text = "Run seed (blank for a new adventure)"
+    seed_input.text = menu_seed_text
+    seed_input.placeholder_text = "Blank uses imported seed %d" % int(next_setup.seed) if next_setup.get("seed_set", false) else "Run seed (blank for a new adventure)"
+    var seed_field := seed_input
+    seed_input.text_changed.connect(func(value: String): menu_seed_text = value)
+    seed_input.tree_exiting.connect(func(): menu_seed_text = seed_field.text)
     seed_input.tooltip_text = "The same integer repeats encounters and reward choices."
     content.add_child(seed_input)
+    button("Enter seed with controller", func(): open_entry(seed_input, "seed"))
     button("Begin run", begin_from_menu)
     if profile_enabled and not profile.data.checkpoint.is_empty():
         button("Resume safe forge", resume_checkpoint)
@@ -328,10 +384,12 @@ func show_menu() -> void:
     content.add_child(extras)
     for entry in [["Practice forge", journey.show_practice], ["First experiment" if not profile.data.tutorial_seen else "Experiment guide", journey.show_tutorial], ["Workshop", journey.show_workshop], ["Share / import", journey.show_sharing]]:
         var item := button(entry[0], entry[1])
+        item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         content.remove_child(item)
         extras.add_child(item)
     if profile_enabled and storage_problem:
         var offline_button := button("Play without saving", play_without_saving)
+        offline_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         content.remove_child(offline_button)
         extras.add_child(offline_button)
     if not profile_enabled:
@@ -342,7 +400,7 @@ func show_menu() -> void:
     button("Settings", func(): show_settings("menu"))
     button("Credits", show_credits)
     button("Quit", request_exit)
-    label_text("WASD / arrows: move · Mouse: aim · Hold left click: cast\nSpace: dodge · Esc: pause · Craft between encounters", 15)
+    label_text("Move: keyboard / left stick · Aim: mouse / right stick\nCurrent cast, dodge and pause bindings are listed in Settings.", 15)
 
 func _notification(what: int) -> void:
     if what == NOTIFICATION_WM_CLOSE_REQUEST:
@@ -486,14 +544,52 @@ func spawn_enemy(kind: String, pos: Vector2, timer: float) -> void:
     next_id += 1
 
 func _input(event: InputEvent) -> void:
+    if event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.2):
+        controller_device = true
+    elif event is InputEventMouseMotion or event is InputEventKey or event is InputEventMouseButton:
+        controller_device = false
+    if not capture_action.is_empty():
+        if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
+            capture_action = ""
+            show_settings(settings_return)
+            get_viewport().set_input_as_handled()
+            return
+        if event.is_pressed() and not event.is_echo() and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton):
+            if bindings.rebind(capture_action, event):
+                bindings.save_bindings()
+                journey_notice = bindings.notice if not bindings.notice.is_empty() else "Binding saved."
+                show_settings(settings_return)
+            else:
+                var pending := capture_action
+                journey_notice = bindings.notice
+                show_settings(settings_return)
+                capture_action = pending
+                label_text("Choose another input for " + pending + ". Back cancels.", 18)
+            get_viewport().set_input_as_handled()
+            return
     if event is InputEventMouseMotion:
+        stick_aim = false
         cursor_position = get_global_transform_with_canvas().affine_inverse() * event.position
 
 func _unhandled_input(event: InputEvent) -> void:
     # Action events reject keyboard echoes by default and remain unhandled-only.
+    if event.is_action_pressed("ui_cancel") and state != "combat":
+        if back_action.is_valid():
+            back_action.call()
+        elif state == "paused":
+            toggle_pause()
+        elif practice:
+            journey.leave_practice()
+        get_viewport().set_input_as_handled()
+        return
     if event.is_action_pressed("pause"):
-        toggle_pause()
-    elif event.is_action_pressed("dodge") and state == "combat" and dodge_cooldown <= 0:
+        if state in ["combat", "paused"]:
+            toggle_pause()
+        elif back_action.is_valid():
+            back_action.call()
+        get_viewport().set_input_as_handled()
+        return
+    elif event.is_action_pressed("dodge") and state == "combat" and not suppress_combat and dodge_cooldown <= 0:
         dodge_time = 0.24
         dodge_cooldown = 1.05
         dodge_direction = movement_direction()
@@ -528,12 +624,19 @@ func simulate(delta: float) -> void:
     mana = minf(100, mana + delta * 22)
     if mana > previous_mana:
         report.event("mana_restored", {"amount": mana - previous_mana})
-    aim = (cursor_position - player_pos).normalized()
-    if aim == Vector2.ZERO:
-        aim = Vector2.RIGHT
+    var controller: Vector2 = Bindings.controller_aim()
+    if controller != Vector2.ZERO:
+        stick_aim = true
+        aim = controller
+    elif not stick_aim:
+        aim = (cursor_position - player_pos).normalized()
+        if aim == Vector2.ZERO:
+            aim = Vector2.RIGHT
+    if suppress_combat and not Input.is_action_pressed("cast") and not Input.is_action_pressed("dodge") and not Input.is_action_pressed("ui_accept"):
+        suppress_combat = false
     player_velocity = dodge_direction * 650 if dodge_time > 0 else movement_direction() * 220
     player_pos = Geometry.move_circle(player_pos, player_velocity * delta, 14, ARENA, obstacles)
-    if Input.is_action_pressed("cast"):
+    if not suppress_combat and Input.is_action_pressed("cast"):
         cast_spell()
     update_enemies(delta)
     if state != "combat":
@@ -1122,8 +1225,16 @@ func show_reward() -> void:
     actions.add_child(enter)
     var extra := HBoxContainer.new()
     content.add_child(extra)
+    if practice:
+        var lab_button := Button.new()
+        lab_button.text = "Spell lab"
+        lab_button.pressed.connect(func():
+            var lab = load("res://scripts/spell_lab.gd").new()
+            lab.open(self)
+        )
+        extra.add_child(lab_button)
     for entry in [["Grimoire / save recipe", journey.show_grimoire], ["Experiment guide", journey.show_tutorial], [storage_action_label, storage_action]]:
-        if practice and entry[0] == "Suspend to menu":
+        if practice and entry[0] in ["Suspend to menu", "Abandon unsaved run"]:
             continue
         var item := Button.new()
         item.text = entry[0]
@@ -1152,11 +1263,12 @@ func toggle_pause() -> void:
         state = "paused"
         clear_panel()
         label_text("PAUSED", 32)
-        label_text("WASD / arrows: move · Mouse: aim / cast\nSpace: dodge through attacks · Esc: resume", 17)
+        label_text("Aim: mouse / right stick · Resume with Pause or Back\nOpen Settings for current action bindings.", 17)
         button("Resume", toggle_pause)
         button("Settings", func(): show_settings("paused"))
         button("Abandon run", abandon_run)
     elif state == "paused":
+        suppress_combat = true
         state = "combat"
         panel.hide()
 
@@ -1206,6 +1318,7 @@ func finish_run(won: bool) -> void:
     audio.play_sfx("victory" if won else "death")
 
 func show_settings(return_state: String) -> void:
+    settings_return = return_state
     state = "settings"
     clear_panel()
     label_text("SETTINGS", 28)
@@ -1225,12 +1338,25 @@ func show_settings(return_state: String) -> void:
         slider.tooltip_text = "Adjust " + key + " volume"
         slider.value_changed.connect(func(value): settings[key] = value; apply_audio(); save_settings())
         row.add_child(slider)
-    for key in ["shake", "reduced_flash"]:
+    for key in ["shake", "reduced_flash", "large_text"]:
         var check := CheckButton.new()
-        check.text = "Camera shake" if key == "shake" else "Reduced flashing"
+        check.text = {"shake": "Camera shake", "reduced_flash": "Reduced flashing", "large_text": "Large menu text"}[key]
         check.button_pressed = settings[key]
-        check.toggled.connect(func(value): settings[key] = value; save_settings())
+        check.toggled.connect(func(value): settings[key] = value; save_settings(); show_settings(return_state))
         content.add_child(check)
+    label_text("Select an action, then press a key, mouse button or controller button. Back cancels. Escape / Start always exit.", 15)
+    for action in Bindings.ACTIONS:
+        button(action.replace("_", " ").capitalize() + ": " + Bindings.action_label(action), func():
+            capture_action = action
+            label_text("Press a new binding for " + action + ". Back cancels.", 18)
+            finish_menu())
+    button("Reset controls", func():
+        bindings.reset_defaults()
+        bindings.save_bindings()
+        journey_notice = bindings.notice if not bindings.notice.is_empty() else "Default controls restored."
+        show_settings(return_state))
+    if not journey_notice.is_empty():
+        label_text(journey_notice, 15)
     button("Back", func():
         if return_state == "menu":
             show_menu()
@@ -1246,7 +1372,9 @@ func save_settings() -> void:
     var config := ConfigFile.new()
     for key in settings:
         config.set_value("accessibility", key, settings[key])
-    config.save(settings_path)
+    var result := config.save(settings_path)
+    if result != OK:
+        journey_notice = "Settings apply this session but could not be saved: " + error_string(result)
 
 func load_settings() -> void:
     var config := ConfigFile.new()
@@ -1255,7 +1383,7 @@ func load_settings() -> void:
             var value = config.get_value("accessibility", key, settings[key])
             if key in ["master", "music", "sfx"] and (value is float or value is int):
                 settings[key] = clampf(float(value), 0, 1)
-            elif key in ["shake", "reduced_flash"] and value is bool:
+            elif key in ["shake", "reduced_flash", "large_text"] and value is bool:
                 settings[key] = value
 
 func update_hud() -> void:
@@ -1301,3 +1429,71 @@ func _draw() -> void:
         Art.draw_player(self, player_pos, aim, dodge_time > 0, hurt_time > 0 and not settings.reduced_flash, visual_time)
     draw_set_transform(Vector2.ZERO)
 
+func finish_menu() -> void:
+    if not panel.visible:
+        return
+    panel.theme.default_font_size = 19 if settings.large_text else 16
+    Navigation.connect_focus_neighbors(content)
+    var controls: Array[Control] = []
+    Navigation._collect(content, controls)
+    for control in controls:
+        if control is Button and control.text == focus_text:
+            control.grab_focus()
+            break
+    Navigation.ensure_focus(content)
+    if state == "menu" and get_viewport().gui_get_focus_owner() is OptionButton:
+        for control in controls:
+            if control is Button and control.text == "Begin run":
+                control.grab_focus()
+                break
+    var focused := get_viewport().gui_get_focus_owner()
+    if focused != null and content.is_ancestor_of(focused):
+        Navigation._reveal(focused)
+        if state == "menu" and focused is Button and focused.text == "Begin run":
+            reveal_menu_start(focused)
+
+func reveal_menu_start(target: Control) -> void:
+    # A fresh menu should show its heading as well as Begin. Text wrapping can
+    # temporarily enlarge the content before the final container sort.
+    for pass_index in 2:
+        await get_tree().process_frame
+    if not is_instance_valid(target) or not target.is_inside_tree() or state != "menu" or get_viewport().gui_get_focus_owner() != target:
+        return
+    menu_scroll.scroll_vertical = 0
+    Navigation._reveal(target)
+
+func open_entry(field: LineEdit, mode: String) -> void:
+    var entry := TextEntry.new()
+    entry.setup(field.text, mode)
+    var previous_back := back_action
+    content.hide()
+    menu_scroll.hide()
+    panel.add_child(entry)
+    var close := func():
+        panel.remove_child(entry)
+        entry.queue_free()
+        content.show()
+        menu_scroll.show()
+        back_action = previous_back
+        finish_menu()
+    entry.accepted.connect(func(value: String):
+        field.text = value
+        if mode == "seed":
+            menu_seed_text = value
+        close.call())
+    entry.cancelled.connect(close)
+    back_action = func(): entry.cancelled.emit()
+    entry.focus_keys()
+
+func control_hint(action: String) -> String:
+    for event in InputMap.action_get_events(action):
+        if controller_device:
+            if event is InputEventJoypadButton:
+                return {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y", JOY_BUTTON_START: "Start", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_LEFT_SHOULDER: "LB"}.get(event.button_index, "Pad %d" % event.button_index)
+            if event is InputEventJoypadMotion and event.axis == JOY_AXIS_TRIGGER_RIGHT:
+                return "RT"
+        elif event is InputEventKey:
+            return OS.get_keycode_string(event.physical_keycode if event.physical_keycode != 0 else event.keycode)
+        elif event is InputEventMouseButton:
+            return "Mouse %d" % event.button_index
+    return "Settings"
