@@ -64,6 +64,7 @@ var controller_device := false
 var suppress_combat := false
 var menu_scroll: ScrollContainer
 var focus_text := ""
+var forge_focus: Dictionary = {}
 var settings := {"master": 0.7, "music": 0.35, "sfx": 0.7, "shake": true, "reduced_flash": false, "large_text": false}
 var ui: CanvasLayer
 var panel: PanelContainer
@@ -321,6 +322,7 @@ func run_export_smoke() -> void:
 func clear_panel() -> void:
     var focused := get_viewport().gui_get_focus_owner()
     focus_text = focused.text if focused is Button else ""
+    forge_focus = focused.get_meta("forge_focus", {}).duplicate() if focused != null else {}
     back_action = Callable()
     capture_action = ""
     suppress_combat = true
@@ -595,6 +597,7 @@ func _unhandled_input(event: InputEvent) -> void:
         dodge_direction = movement_direction()
         if dodge_direction == Vector2.ZERO:
             dodge_direction = aim
+        dodge_direction = dodge_direction.normalized()
         audio.play_sfx("dodge")
 
 func movement_direction() -> Vector2:
@@ -627,7 +630,7 @@ func simulate(delta: float) -> void:
     var controller: Vector2 = Bindings.controller_aim()
     if controller != Vector2.ZERO:
         stick_aim = true
-        aim = controller
+        aim = controller.normalized()
     elif not stick_aim:
         aim = (cursor_position - player_pos).normalized()
         if aim == Vector2.ZERO:
@@ -1153,20 +1156,28 @@ func show_reward() -> void:
     for i in max_slots():
         var slot := VBoxContainer.new()
         slot.custom_minimum_size.x = 142
+        slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         slots.add_child(slot)
         var title := Button.new()
         title.text = "%d  %s %s" % [i + 1, component_icon(draft[i]), catalog[draft[i]].name] if i < draft.size() else "%d  — Empty —" % (i + 1)
-        title.add_theme_font_size_override("font_size", 16)
+        title.add_theme_font_size_override("font_size", 19 if settings.large_text else 16)
+        title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        if i < draft.size():
+            title.set_meta("forge_focus", {"component": draft[i], "action": "inspect", "index": i})
         title.disabled = i >= draft.size()
         if i < draft.size():
             title.pressed.connect(func(): selected_component = draft[i]; show_reward())
         slot.add_child(title)
-        var controls := HBoxContainer.new()
+        var controls: Container = GridContainer.new() if settings.large_text else HBoxContainer.new()
+        if controls is GridContainer:
+            controls.columns = 2
         slot.add_child(controls)
         for action in ["left", "right", "remove"]:
             var item := Button.new()
             item.text = {"left": "←", "right": "→", "remove": "Remove"}[action]
-            item.add_theme_font_size_override("font_size", 13)
+            item.add_theme_font_size_override("font_size", 19 if settings.large_text else 13)
+            if i < draft.size():
+                item.set_meta("forge_focus", {"component": draft[i], "action": action, "index": i})
             item.disabled = i == 0 or i >= draft.size() or (action == "left" and i == 1) or (action == "right" and i == draft.size() - 1)
             if action == "remove" and i > 0 and i < draft.size():
                 var without := draft.duplicate()
@@ -1177,13 +1188,14 @@ func show_reward() -> void:
             item.pressed.connect(func(): edit_draft(action, i))
             controls.add_child(item)
     var row := GridContainer.new()
-    row.columns = 5
+    row.columns = 4 if settings.large_text else 5
     content.add_child(row)
     for id in owned:
         if id == "projectile":
             continue
         var item := Button.new()
-        item.add_theme_font_size_override("font_size", 13)
+        item.add_theme_font_size_override("font_size", 19 if settings.large_text else 13)
+        item.set_meta("forge_focus", {"component": id, "action": "add", "index": draft.size()})
         item.text = ("✓ " if draft.has(id) else "+ ") + str(catalog[id].name)
         item.disabled = draft.has(id) or draft.size() >= max_slots() or not Spell.compile(draft + [id]).valid
         item.tooltip_text = ("Equipped. " if draft.has(id) else "Owned; remove a slot to equip. " if draft.size() >= max_slots() else "Owned; add to next empty slot. ") + str(catalog[id].description)
@@ -1199,7 +1211,7 @@ func show_reward() -> void:
     journey.route_controls()
     var test_area := preload("res://scripts/spell_preview.gd").new()
     test_area.name = "SpellPreview"
-    test_area.custom_minimum_size = Vector2(740, 76)
+    test_area.custom_minimum_size = Vector2(740, 150 if settings.large_text else 76)
     test_area.source = self
     content.add_child(test_area)
     journey.restore_preview(test_area)
@@ -1436,10 +1448,12 @@ func finish_menu() -> void:
     Navigation.connect_focus_neighbors(content)
     var controls: Array[Control] = []
     Navigation._collect(content, controls)
-    for control in controls:
-        if control is Button and control.text == focus_text:
-            control.grab_focus()
-            break
+    var restored_forge := restore_forge_focus(controls)
+    if not restored_forge and forge_focus.is_empty():
+        for control in controls:
+            if control is Button and control.text == focus_text:
+                control.grab_focus()
+                break
     Navigation.ensure_focus(content)
     if state == "menu" and get_viewport().gui_get_focus_owner() is OptionButton:
         for control in controls:
@@ -1451,6 +1465,22 @@ func finish_menu() -> void:
         Navigation._reveal(focused)
         if state == "menu" and focused is Button and focused.text == "Begin run":
             reveal_menu_start(focused)
+
+func restore_forge_focus(controls: Array[Control]) -> bool:
+    if forge_focus.is_empty() or state not in ["reward", "practice"] or not selected_reward:
+        return false
+    var component: String = forge_focus.component
+    if not draft.has(component) and forge_focus.action != "add" and not draft.is_empty():
+        component = draft[clampi(int(forge_focus.index), 0, draft.size() - 1)]
+    # Follow the component through a swap. If that action becomes unavailable
+    # (or a removed slot had no removable neighbor), inspect its adjacent slot.
+    for action in [forge_focus.action, "inspect"]:
+        for control in controls:
+            var identity: Dictionary = control.get_meta("forge_focus", {})
+            if identity.get("component") == component and identity.get("action") == action:
+                control.grab_focus()
+                return true
+    return false
 
 func reveal_menu_start(target: Control) -> void:
     # A fresh menu should show its heading as well as Begin. Text wrapping can
@@ -1493,7 +1523,7 @@ func control_hint(action: String) -> String:
             if event is InputEventJoypadMotion and event.axis == JOY_AXIS_TRIGGER_RIGHT:
                 return "RT"
         elif event is InputEventKey:
-            return OS.get_keycode_string(event.physical_keycode if event.physical_keycode != 0 else event.keycode)
+            return OS.get_keycode_string(event.get_physical_keycode_with_modifiers() if event.physical_keycode != 0 else event.get_keycode_with_modifiers())
         elif event is InputEventMouseButton:
             return "Mouse %d" % event.button_index
     return "Settings"

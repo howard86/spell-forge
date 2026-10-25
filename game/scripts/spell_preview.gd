@@ -20,19 +20,30 @@ var report := ""
 var comparison: Dictionary = {}
 var scenario := "cluster"
 var picker: OptionButton
+var report_label: Label
+var large_text := false
 var terrain: Array = []
 
 func _ready() -> void:
+    large_text = (is_instance_valid(source) and source.settings.large_text) or get_theme_default_font_size() >= 19
+    if large_text:
+        custom_minimum_size.y = maxf(custom_minimum_size.y, 150)
     mouse_filter = Control.MOUSE_FILTER_PASS
     clip_contents = true
     picker = OptionButton.new()
     picker.position = Vector2(5, 3)
-    picker.size = Vector2(118, 25)
-    picker.add_theme_font_size_override("font_size", 12)
+    picker.size = Vector2(200, 32) if large_text else Vector2(118, 25)
+    picker.add_theme_font_size_override("font_size", 19 if large_text else 12)
     for title in Scenarios.TITLES:
         picker.add_item(title)
     picker.item_selected.connect(func(index: int): restart(Scenarios.IDS[index]))
     add_child(picker)
+    report_label = Label.new()
+    report_label.add_theme_font_size_override("font_size", 19 if large_text else 12)
+    report_label.add_theme_color_override("font_color", Art.TEAL)
+    report_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    report_label.position = Vector2(5, 38) if large_text else Vector2(131, 0)
+    add_child(report_label)
     visibility_changed.connect(func():
         if not is_visible_in_tree():
             set_process(false))
@@ -126,6 +137,8 @@ func restart(mode: String = "group") -> void:
     scenario = draft_result.scenario
     frames = draft_result.frames
     report = outcome_text("Equipped" if experiment_id == "" else "Baseline", equipped) + "\n" + outcome_text("Draft" if experiment_id == "" else "Prototype", draft_result)
+    if is_instance_valid(report_label):
+        report_label.text = report
     tooltip_text = str(draft_result.description) + "\n" + str(draft_result.assumptions) + "\nAnimation shows draft; equipped uses the identical setup. Run unaffected."
     if is_instance_valid(picker) and scenario in Scenarios.IDS:
         picker.select(Scenarios.IDS.find(scenario))
@@ -138,7 +151,7 @@ func _process(delta: float) -> void:
     if frame_time >= 2.0 or not is_visible_in_tree():
         set_process(false)
 func point(value: Vector2) -> Vector2:
-    return Vector2(12 + (value.x - 32) / 896 * (size.x - 24), 51 + (value.y - 300) * 0.12)
+    return Vector2(12 + (value.x - 32) / 896 * (size.x - 24), (125 if large_text else 51) + (value.y - 300) * 0.12)
 func blast_boundary(origin: Vector2, radius: float) -> PackedVector2Array:
     var boundary := PackedVector2Array()
     for vertex: Vector2 in Geometry.radial_boundary(origin, radius, RADIAL_ARENA, terrain):
@@ -146,11 +159,9 @@ func blast_boundary(origin: Vector2, radius: float) -> PackedVector2Array:
     return boundary
 func _draw() -> void:
     draw_rect(Rect2(Vector2.ZERO, size), Art.STONE.darkened(0.3))
-    var lines := report.split("\n")
-    var report_x := picker.position.x + picker.size.x + 8 if is_instance_valid(picker) else 148.0
-    for i in lines.size():
-        draw_string(ThemeDB.fallback_font, Vector2(report_x, 13 + i * 14), lines[i], HORIZONTAL_ALIGNMENT_LEFT, size.x - report_x - 8, 12, Art.TEAL)
-    draw_string(ThemeDB.fallback_font, Vector2(7, 41), "1 cast · 2s", HORIZONTAL_ALIGNMENT_LEFT, 100, 11, Art.TEAL)
+    if is_instance_valid(report_label):
+        report_label.size = Vector2(maxf(1, size.x - report_label.position.x - 8), 0)
+    draw_string(ThemeDB.fallback_font, Vector2(220, 25) if large_text else Vector2(7, 41), "1 cast · 2s", HORIZONTAL_ALIGNMENT_LEFT, 150, 19 if large_text else 11, Art.TEAL)
     draw_line(Vector2(size.x - 12, 24), Vector2(size.x - 12, size.y - 4), Art.GOLD, 2)
     if frames.is_empty():
         return

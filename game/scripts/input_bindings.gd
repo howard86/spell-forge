@@ -66,7 +66,7 @@ static func validate_event(action: String, event: InputEvent) -> bool:
 		var code: int = event.physical_keycode if event.physical_keycode != 0 else event.keycode
 		return not event.echo and code != KEY_ESCAPE and ((code >= KEY_SPACE and code <= KEY_ASCIITILDE) or code in SPECIAL_KEYS)
 	if event is InputEventMouseButton:
-		return event.button_index >= MOUSE_BUTTON_LEFT and event.button_index <= MOUSE_BUTTON_XBUTTON2 and not event.double_click and not event.canceled and not (event.alt_pressed or event.shift_pressed or event.ctrl_pressed or event.meta_pressed)
+		return event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_XBUTTON1, MOUSE_BUTTON_XBUTTON2] and not event.double_click and not event.canceled and not (event.alt_pressed or event.shift_pressed or event.ctrl_pressed or event.meta_pressed)
 	if event is InputEventJoypadButton:
 		return event.button_index >= JOY_BUTTON_A and event.button_index <= JOY_BUTTON_TOUCHPAD and (event.button_index != JOY_BUTTON_START or action == "pause")
 	return false
@@ -135,7 +135,7 @@ static func _apply(action: String, event: InputEvent) -> void:
 func rebind(action: String, event: InputEvent) -> bool:
 	notice = ""
 	if not validate_event(action, event):
-		notice = "Unsupported binding. Escape is reserved for Back and Pause; Start is reserved for Pause."
+		notice = "Mouse wheel cannot be held. Choose a key or mouse/controller button." if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT] else "Unsupported binding. Escape is reserved for Back and Pause; Start is reserved for Pause."
 		return false
 	for other in ACTIONS:
 		if other == action:

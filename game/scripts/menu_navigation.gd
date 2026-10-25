@@ -75,3 +75,20 @@ static func connect_focus_neighbors(root: Control) -> void:
 		var reveal := _reveal.bind(control)
 		if not control.focus_entered.is_connected(reveal):
 			control.focus_entered.connect(reveal)
+
+## Directional movement follows visual grid coordinates; Tab stays sequential.
+static func connect_grid_neighbors(grid: GridContainer) -> void:
+	var controls: Array[Control] = []
+	_collect(grid, controls)
+	for index in controls.size():
+		var control := controls[index]
+		var row := index / grid.columns
+		var row_start := row * grid.columns
+		var row_end := mini(row_start + grid.columns, controls.size()) - 1
+		control.focus_neighbor_left = control.get_path_to(controls[maxi(row_start, index - 1)])
+		control.focus_neighbor_right = control.get_path_to(controls[mini(row_end, index + 1)])
+		var above := index - grid.columns
+		var below := index + grid.columns
+		# Clamp to the same column's last row, including a short final row.
+		control.focus_neighbor_top = control.get_path_to(controls[above if above >= 0 else index])
+		control.focus_neighbor_bottom = control.get_path_to(controls[below if below < controls.size() else index])

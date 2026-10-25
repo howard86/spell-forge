@@ -53,4 +53,5 @@ func rebuild() -> void:
     focus_keys()
 func focus_keys() -> void:
     Navigation.connect_focus_neighbors(self)
+    Navigation.connect_grid_neighbors(keys)
     Navigation.ensure_focus(self)
