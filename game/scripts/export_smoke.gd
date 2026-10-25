@@ -22,7 +22,7 @@ func run(game: Node) -> void:
             credits_found = true
     check(credits_found, "credits display packaged notices")
     game.start_run(4242)
-    check(game.state == "combat" and game.enemies.size() == 4, "start seeded combat")
+    check(game.state == "combat" and game.enemies.size() == 1 and game.enemies[0].kind == "lane_archer", "start seeded lane teaching wave")
     Input.action_press("move_right")
     var start: Vector2 = game.player_pos
     game.simulate(1.0 / 60)
@@ -34,6 +34,11 @@ func run(game: Node) -> void:
     game._physics_process(1.0)
     check(game.state == "paused" and game.elapsed == elapsed, "pause freezes simulation")
     game.toggle_pause()
+    game.enemies[0].hp = 0
+    game.simulate(0.01)
+    check(game.state == "combat" and game.pending_spawns.size() == 3, "queued reinforcements prevent early clear")
+    game.simulate(1.01)
+    check(game.enemies.size() == 3 and game.pending_spawns.is_empty(), "announced second wave spawns")
     game.hurt_time = 0
     game.damage_player(100)
     check(game.state == "death", "death transition")

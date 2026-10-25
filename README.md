@@ -8,7 +8,7 @@
 
 Compose a spell, fight through compact randomized encounters, earn new components, and revise your build between battles. Each run should reward meaningful experimentation rather than repetitive stat grinding.
 
-**MVP target:** A Windows-first, 10–15-minute playable run with one wizard, one biome, six encounters, a final boss, eight spell components, five normal enemy archetypes, and a simple ordered-slot spell editor.
+**MVP target:** A Windows-first, 10–15-minute playable run with one wizard, one biome, six encounters, a final boss, eleven spell components, six normal enemy archetypes, and a simple ordered-slot spell editor.
 
 ## Development
 

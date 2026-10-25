@@ -2,6 +2,8 @@
 
 **Status:** MVP design contract. Exact implemented semantics, prices, inheritance, and bounds are specified in [ADR 0001](decisions/0001-spell-semantics.md). The proposal sections below preserve the original design context; the ADR resolves their open choices.
 
+The first balance expansion adds Frost, Wall Charge, and Delayed Blast. See [ADR 0002](decisions/0002-encounter-balance.md) for the current upgrade and encounter rules.
+
 ## Objective
 Enable ordered composition of spells with predictable outcomes, bounded execution, and visible trade-offs. This is **not** a general-purpose scripting language or node graph in the MVP.
 
@@ -16,6 +18,9 @@ Enable ordered composition of spells with predictable outcomes, bounded executio
 | Chain | Trigger | On eligible hit, affect a nearby new target |
 | Explode | Trigger | Area damage on a defined impact event |
 | Cooldown | Modifier | Reduce cast delay within minimum limits |
+| Frost | Modifier | Trade direct damage for a brief root-hit movement slow |
+| Wall Charge | Modifier | Requires Bounce; reward a successful wall reflection |
+| Delayed Blast | Modifier | Requires Explode; delay its explosion for greater area damage |
 
 The names above specify gameplay intent, **not** final parameter values.
 

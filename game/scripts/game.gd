@@ -26,6 +26,13 @@ var cast_id := 0
 var enemies: Array = []
 var projectiles: Array = []
 var hazards: Array = []
+var pending_spawns: Array = []
+var delayed_blasts: Array = []
+var encounter_waves: Array = []
+var next_wave := 0
+var wave_threshold := 1
+var spawn_warning := 1.0
+var player_velocity := Vector2.ZERO
 var effects: Array = []
 var casts: Dictionary = {}
 var owned: Array = ["projectile"]
@@ -112,6 +119,8 @@ func button(value: String, action: Callable, tip: String = "") -> Button:
 func show_menu() -> void:
     state = "menu"
     effects.clear()
+    pending_spawns.clear()
+    delayed_blasts.clear()
     clear_panel()
     label_text("SPELLFORGE", 36)
     label_text("Build a spell. Survive six trials. Break the Warden.")
@@ -189,6 +198,8 @@ func start_encounter() -> void:
     projectiles.clear()
     hazards.clear()
     effects.clear()
+    pending_spawns.clear()
+    delayed_blasts.clear()
     casts.clear()
     cooldown = 0.0
     dodge_time = 0.0
@@ -197,22 +208,46 @@ func start_encounter() -> void:
     player_pos = ARENA.get_center()
     var encounter: Dictionary = Director.encounter(run_seed, encounter_index)
     layout = encounter.layout
-    var rng := RandomNumberGenerator.new()
-    rng.seed = encounter.seed
-    var roster: Array = encounter.roster
-    for i in roster.size():
-        var angle := TAU * float(i) / roster.size()
-        var pos := ARENA.get_center() + Vector2(cos(angle) * 340, sin(angle) * 155)
-        if layout == 1:
-            pos = Vector2(110 if i % 2 == 0 else 850, 130 + (i / 2) * 49 % 330)
-        elif layout == 2:
-            pos = Vector2(130 + i * 113 % 710, 125 if i % 2 == 0 else 465)
-        spawn_enemy(roster[i], pos, rng.randf_range(0.8, 2.0))
+    encounter_waves = encounter.get("waves", [encounter.roster]).duplicate(true)
+    next_wave = 0
+    wave_threshold = int(encounter.get("wave_threshold", 1))
+    spawn_warning = float(encounter.get("spawn_warning", 1.0))
+    queue_wave(true)
     audio.play_sfx("reward")
 
+func queue_wave(immediate: bool = false) -> void:
+    if next_wave >= encounter_waves.size():
+        return
+    var roster: Array = encounter_waves[next_wave]
+    var rng := RandomNumberGenerator.new()
+    rng.seed = run_seed + encounter_index * 7919 + next_wave * 3571
+    for i in roster.size():
+        var angle := TAU * float(i) / maxi(1, roster.size()) + rng.randf_range(-0.12, 0.12)
+        var pos := ARENA.get_center() + Vector2(cos(angle) * 340, sin(angle) * 155)
+        if pos.distance_to(player_pos) < 100:
+            pos = ARENA.get_center() - (pos - ARENA.get_center())
+        if immediate:
+            spawn_enemy(roster[i], pos, rng.randf_range(0.8, 2.0))
+        else:
+            pending_spawns.append({"kind": roster[i], "position": pos, "remaining": spawn_warning, "duration": spawn_warning})
+    next_wave += 1
+
+func update_spawns(delta: float) -> void:
+    for spawn in pending_spawns:
+        spawn.remaining -= delta
+        if spawn.remaining <= 0:
+            # The player may approach a warning; postpone materialization until safe.
+            if spawn.position.distance_to(player_pos) < 100:
+                spawn.remaining = 0.05
+            else:
+                spawn_enemy(spawn.kind, spawn.position, 0.8)
+    pending_spawns = pending_spawns.filter(func(spawn): return spawn.remaining > 0)
+    if pending_spawns.is_empty() and enemies.filter(func(enemy): return enemy.hp > 0).size() <= wave_threshold:
+        queue_wave()
+
 func spawn_enemy(kind: String, pos: Vector2, timer: float) -> void:
-    var health: float = {"pursuer": 42.0, "archer": 34.0, "swarm": 18.0, "bulwark": 100.0, "channeler": 48.0, "boss": 900.0}[kind]
-    enemies.append({"id": next_id, "kind": kind, "position": pos, "hp": health, "max_hp": health, "radius": 27.0 if kind == "boss" else 13.0, "telegraph": 0.0, "aim": Vector2.DOWN, "phase": 1, "timer": timer, "burn": {}})
+    var health: float = {"pursuer": 42.0, "archer": 34.0, "lane_archer": 34.0, "swarm": 18.0, "bulwark": 100.0, "channeler": 48.0, "boss": 900.0}[kind]
+    enemies.append({"id": next_id, "kind": kind, "position": pos, "hp": health, "max_hp": health, "radius": 27.0 if kind == "boss" else 13.0, "telegraph": 0.0, "aim": Vector2.DOWN, "phase": 1, "timer": timer, "burn": {}, "attack_step": 0, "frost_until": 0.0})
     next_id += 1
 
 func _input(event: InputEvent) -> void:
@@ -242,6 +277,8 @@ func _physics_process(delta: float) -> void:
     queue_redraw()
 
 func simulate(delta: float) -> void:
+    if state != "combat":
+        return
     elapsed += delta
     cooldown = maxf(0, cooldown - delta)
     dodge_time = maxf(0, dodge_time - delta)
@@ -253,22 +290,25 @@ func simulate(delta: float) -> void:
     aim = (cursor_position - player_pos).normalized()
     if aim == Vector2.ZERO:
         aim = Vector2.RIGHT
-    player_pos += (dodge_direction * 650 if dodge_time > 0 else movement_direction() * 220) * delta
+    player_velocity = dodge_direction * 650 if dodge_time > 0 else movement_direction() * 220
+    player_pos += player_velocity * delta
     player_pos = player_pos.clamp(ARENA.position + Vector2(14, 14), ARENA.end - Vector2(14, 14))
     if Input.is_action_pressed("cast"):
         cast_spell()
     update_enemies(delta)
     if state != "combat":
         return
+    update_delayed_blasts(delta)
     update_projectiles(delta)
     if state != "combat":
         return
     update_hazards(delta)
     if state != "combat":
         return
+    update_spawns(delta)
     update_effects(delta)
     enemies = enemies.filter(func(e): return e.hp > 0)
-    if state == "combat" and enemies.is_empty():
+    if state == "combat" and enemies.is_empty() and pending_spawns.is_empty() and next_wave >= encounter_waves.size():
         encounter_clear()
 
 func cast_spell() -> bool:
@@ -292,7 +332,7 @@ func add_projectile(pos: Vector2, direction: Vector2, hostile: bool, owner: int 
     if projectiles.size() >= MAX_PROJECTILES:
         return
     var spell: Dictionary = casts[owner].compiled if not hostile and casts.has(owner) else compiled
-    projectiles.append({"position": pos, "direction": direction.normalized(), "enemy": hostile, "fire": false if hostile else bool(spell.fire), "radius": 6.0 if hostile else 5.0, "life": 5.0 if hostile else float(spell.life), "speed": 180.0 if hostile else float(spell.speed), "cast_id": owner, "generation": generation, "hit_ids": [], "pierce": 0 if hostile else int(spell.pierce), "bounces": 0 if hostile else int(spell.bounces)})
+    projectiles.append({"position": pos, "direction": direction.normalized(), "enemy": hostile, "fire": false if hostile else bool(spell.fire), "radius": 6.0 if hostile else 5.0, "life": 5.0 if hostile else float(spell.life), "speed": 180.0 if hostile else float(spell.speed), "cast_id": owner, "generation": generation, "hit_ids": [], "wall_charged": false, "wall_charge": false if hostile else bool(spell.get("wall_charge", false)), "frost": false if hostile else bool(spell.get("frost", false)) and generation == 0, "pierce": 0 if hostile else int(spell.pierce), "bounces": 0 if hostile else int(spell.bounces)})
 
 func update_enemies(delta: float) -> void:
     for enemy in enemies:
@@ -307,6 +347,8 @@ func update_enemies(delta: float) -> void:
                 enemy.burn = {}
         if enemy.hp <= 0:
             continue
+        if elapsed >= float(enemy.get("frost_until", 0.0)):
+            enemy.frost_amount = 0.0
         var to_player: Vector2 = player_pos - enemy.position
         var distance := to_player.length()
         if enemy.kind == "boss" and enemy.hp < enemy.max_hp * 0.5 and enemy.phase == 1:
@@ -320,27 +362,64 @@ func update_enemies(delta: float) -> void:
                 enemy.timer = 1.2 if enemy.phase == 2 else 2.0
         else:
             enemy.aim = to_player.normalized()
-            var speed: float = {"pursuer": 91.0, "swarm": 135.0, "bulwark": 52.0, "archer": 47.0, "channeler": 35.0, "boss": 45.0}[enemy.kind]
-            if distance > (210 if enemy.kind in ["archer", "channeler"] else 38):
+            var speed: float = {"pursuer": 91.0, "swarm": 135.0, "bulwark": 52.0, "archer": 47.0, "lane_archer": 47.0, "channeler": 35.0, "boss": 45.0}[enemy.kind]
+            if elapsed < float(enemy.get("frost_until", 0.0)):
+                speed *= 0.9 if enemy.kind == "boss" else 0.75
+            if distance > (210 if enemy.kind in ["archer", "lane_archer", "channeler"] else 38):
                 enemy.position += enemy.aim * speed * delta
             enemy.timer -= delta
             if enemy.timer <= 0:
-                enemy.telegraph = 0.8 if enemy.kind != "swarm" else 0.45
+                begin_enemy_warning(enemy)
         enemy.position = enemy.position.clamp(ARENA.position + Vector2(28, 28), ARENA.end - Vector2(28, 28))
         if distance < enemy.radius + 11:
             damage_player(8.0)
 
+func begin_enemy_warning(enemy: Dictionary) -> void:
+    var kind := "melee"
+    var duration := 0.8 if enemy.kind != "swarm" else 0.45
+    if enemy.kind == "lane_archer":
+        kind = "lane"
+        duration = 0.9
+    elif enemy.kind == "boss":
+        var sequence: Array = ["fan", "sweep", "charge"] if enemy.phase == 1 else ["charge", "fan", "sweep", "fan", "charge", "sweep"]
+        kind = sequence[int(enemy.get("attack_step", 0)) % sequence.size()]
+        enemy.attack_step = int(enemy.get("attack_step", 0)) + 1
+        duration = 1.0
+    elif enemy.kind == "archer":
+        kind = "fan"
+    elif enemy.kind == "channeler":
+        kind = "mark"
+    enemy.attack_shots = 5 if enemy.kind == "boss" else 1
+    enemy.attack_kind = kind
+    enemy.warning_duration = duration
+    enemy.telegraph = duration
+    enemy.attack_origin = enemy.position
+    var predicted: Vector2 = (player_pos + player_velocity * 0.3).clamp(ARENA.position + Vector2(28, 28), ARENA.end - Vector2(28, 28))
+    enemy.aim = (predicted - enemy.position).normalized()
+    enemy.attack_target = predicted
+    enemy.attack_width = 16.0 if kind == "lane" else float(enemy.radius) if kind == "charge" else 30.0
+    if kind in ["lane", "sweep"]:
+        enemy.attack_target = enemy.position + enemy.aim * 700.0
+
 func enemy_attack(enemy: Dictionary) -> void:
-    if enemy.kind in ["archer", "boss"]:
-        var count: int = (7 if enemy.phase == 2 else 5) if enemy.kind == "boss" else 1
+    var kind: String = enemy.get("attack_kind", "melee")
+    if kind == "fan":
+        var count := int(enemy.get("attack_shots", 5 if enemy.kind == "boss" else 1))
         for i in count:
             add_projectile(enemy.position, enemy.aim.rotated((i - (count - 1) / 2.0) * 0.22), true)
-    if enemy.kind in ["channeler", "boss"]:
-        hazards.append({"position": player_pos, "radius": 49.0 if enemy.kind == "boss" else 38.0, "progress": 0.0, "life": 1.2})
-    if enemy.kind in ["pursuer", "swarm", "bulwark"]:
-        enemy.position += enemy.aim * (68 if enemy.kind != "bulwark" else 45)
-        if enemy.position.distance_to(player_pos) < 35:
+    elif kind in ["lane", "sweep"]:
+        if segment_contact(player_pos, float(enemy.attack_width) + 11.0, enemy.attack_origin, enemy.attack_target) != INF:
+            damage_player(22.0)
+        add_effect("chain", enemy.attack_origin, enemy.attack_target, 0)
+    elif kind == "mark":
+        hazards.append({"position": enemy.get("attack_target", player_pos), "radius": 38.0, "progress": 0.0, "life": 1.2})
+    elif kind == "charge" or enemy.kind in ["pursuer", "swarm", "bulwark"]:
+        var origin: Vector2 = enemy.position
+        var destination: Vector2 = enemy.get("attack_target", origin) if kind == "charge" else origin + enemy.aim * (45 if enemy.kind == "bulwark" else 68)
+        destination = destination.clamp(ARENA.position + Vector2(28, 28), ARENA.end - Vector2(28, 28))
+        if segment_contact(player_pos, float(enemy.radius) + 11.0, origin, destination) != INF:
             damage_player(15.0)
+        enemy.position = destination
 
 func update_projectiles(delta: float) -> void:
     var current: Array = projectiles.duplicate()
@@ -454,16 +533,34 @@ func resolve_projectile_hit(projectile: Dictionary, enemy: Dictionary) -> void:
                         if target.kind == "bulwark" and projectile.direction.dot(target.aim) < -0.35:
                             amount *= 0.55
                         hurt_enemy(target, amount)
+                        if event.get("frost", false):
+                            target.frost_until = elapsed + 1.0
+                            target.frost_amount = 0.1 if target.kind == "boss" else 0.25
                         if event.get("burn", false):
                             target.burn = Spell.refresh_burn(target.burn, Spell.BURN_DPS, elapsed)
             "split":
                 if allow_split:
                     add_projectile(event.position, event.direction, false, projectile.cast_id, 1)
+            "delayed_explode":
+                if delayed_blasts.size() < 64:
+                    delayed_blasts.append({"position": event.position, "radius": event.radius, "damage": event.damage, "remaining": event.delay, "duration": event.delay})
             "explode":
                 add_effect("explode", event.position, event.position, float(event.radius))
                 for target in enemies:
                     if target.position.distance_to(event.position) <= event.radius:
                         hurt_enemy(target, float(event.damage))
+
+func update_delayed_blasts(delta: float) -> void:
+    if state != "combat":
+        return
+    for blast in delayed_blasts:
+        blast.remaining -= delta
+        if blast.remaining <= 0:
+            add_effect("explode", blast.position, blast.position, float(blast.radius))
+            for target in enemies:
+                if target.hp > 0 and target.position.distance_to(blast.position) <= blast.radius:
+                    hurt_enemy(target, float(blast.damage))
+    delayed_blasts = delayed_blasts.filter(func(blast): return blast.remaining > 0)
 
 # Cosmetic effects have no collision or damage authority.
 func add_effect(kind: String, origin: Vector2, target: Vector2, radius: float) -> void:
@@ -491,7 +588,7 @@ func update_hazards(delta: float) -> void:
         if state != "combat":
             return
         hazard.progress += delta / hazard.life
-        if hazard.progress >= 1 and player_pos.distance_to(hazard.position) < hazard.radius + 11:
+        if hazard.progress >= 1 and (segment_contact(player_pos, float(hazard.width) + 11.0, hazard.origin, hazard.target) != INF if hazard.get("kind", "circle") == "lane" else player_pos.distance_to(hazard.position) < hazard.radius + 11):
             damage_player(22.0)
     hazards = hazards.filter(func(h): return h.progress < 1)
 
@@ -508,6 +605,8 @@ func encounter_clear() -> void:
     projectiles.clear()
     hazards.clear()
     effects.clear()
+    pending_spawns.clear()
+    delayed_blasts.clear()
     casts.clear()
     if encounter_index >= 6:
         finish_run(true)
@@ -530,19 +629,20 @@ func choose_reward(id: String) -> void:
     elif not owned.has(id):
         owned.append(id)
         selected_component = id
-        if draft.size() < 5:
+        if draft.size() < 5 and Spell.compile(draft + [id]).valid:
             draft.append(id)
     show_reward()
 
 func component_icon(id: String) -> String:
-    return {"projectile": "◆", "fire": "▲", "pierce": "⇥", "split": "⑂", "bounce": "↔", "chain": "ϟ", "explode": "✦", "cooldown": "◷", "restore": "+"}.get(id, "◆")
+    return {"projectile": "◆", "fire": "▲", "pierce": "⇥", "split": "⑂", "bounce": "↔", "chain": "ϟ", "explode": "✦", "cooldown": "◷", "frost": "❄", "wall_charge": "↯", "delayed_blast": "◉", "restore": "+"}.get(id, "◆")
 
 func component_use(id: String) -> String:
-    return {"projectile": "Your spell starts here.", "fire": "Wear down durable enemies.", "pierce": "Aim through a line of enemies.", "split": "Spread into nearby enemies.", "bounce": "Use walls for another pass.", "chain": "Connect clustered enemies.", "explode": "Strike tightly packed groups.", "cooldown": "Spend mana faster for rapid casts."}.get(id, "Recover before the next trial.")
+    return {"frost": "Slow movement, not enemy attacks.", "wall_charge": "Requires Bounce equipped; aim at a wall.", "delayed_blast": "Requires Explode equipped; enemies can escape the marker.", "projectile": "Your spell starts here.", "fire": "Wear down durable enemies.", "pierce": "Aim through a line of enemies.", "split": "Spread into nearby enemies.", "bounce": "Use walls for another pass.", "chain": "Connect clustered enemies.", "explode": "Strike tightly packed groups.", "cooldown": "Spend mana faster for rapid casts."}.get(id, "Recover before the next trial.")
 
 func edit_draft(action: String, index: int = -1, id: String = "") -> void:
     if state != "reward" or not selected_reward:
         return
+    var previous_draft := draft.duplicate()
     match action:
         "remove":
             if index > 0 and index < draft.size():
@@ -556,6 +656,8 @@ func edit_draft(action: String, index: int = -1, id: String = "") -> void:
         "add":
             if owned.has(id) and not draft.has(id) and draft.size() < 5:
                 draft.append(id)
+    if not Spell.compile(draft).valid:
+        draft = previous_draft
     show_reward()
 
 func show_reward() -> void:
@@ -563,7 +665,7 @@ func show_reward() -> void:
     label_text("TRIAL %d CLEARED · +15 health" % (encounter_index + 1), 24)
     var catalog: Dictionary = Spell.catalog()
     if not selected_reward:
-        label_text("Choose one component to own this run", 17)
+        label_text("Choose one component or recover health", 17)
         var cards := HBoxContainer.new()
         cards.add_theme_constant_override("separation", 10)
         content.add_child(cards)
@@ -572,10 +674,10 @@ func show_reward() -> void:
             card.custom_minimum_size = Vector2(245, 190)
             card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
             card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-            card.text = "+  RESTORE\n\nRecover 25 extra health.\n\nPrepare for the next fight." if id == "restore" else "%s  %s\n\n%s\n\nMana +%d · %s" % [component_icon(id), catalog[id].name, catalog[id].description, catalog[id].cost, component_use(id)]
+            card.text = ("+  RESTORE\n\nRecover %d health now (up to 25).\n\n%s" % [mini(25, int(100 - hp)), "Already at full health; no healing gained." if hp >= 100 else "Prepare for the next fight."]) if id == "restore" else "%s  %s\n\n%s\n\nMana +%d · %s" % [component_icon(id), catalog[id].name, catalog[id].description, catalog[id].cost, component_use(id)]
             card.pressed.connect(func(): choose_reward(id))
             cards.add_child(card)
-        label_text("Five slots full? Your reward stays owned. Remove a slot to equip it." if draft.size() == 5 else "Your reward is equipped automatically when a slot is free.", 15)
+        label_text("Five slots full? Your reward stays owned. Remove a slot to equip it." if draft.size() == 5 else "Auto-equips when a slot and required components are available.", 15)
         return
     label_text("SPELL FORGE · ordered slots · Projectile is fixed", 16)
     var slots := HBoxContainer.new()
@@ -599,6 +701,12 @@ func show_reward() -> void:
             item.text = {"left": "←", "right": "→", "remove": "Remove"}[action]
             item.add_theme_font_size_override("font_size", 13)
             item.disabled = i == 0 or i >= draft.size() or (action == "left" and i == 1) or (action == "right" and i == draft.size() - 1)
+            if action == "remove" and i > 0 and i < draft.size():
+                var without := draft.duplicate()
+                without.remove_at(i)
+                if not Spell.compile(without).valid:
+                    item.disabled = true
+                    item.tooltip_text = "Remove Wall Charge before Bounce, or Delayed Blast before Explode."
             item.pressed.connect(func(): edit_draft(action, i))
             controls.add_child(item)
     var row := HBoxContainer.new()
@@ -609,8 +717,10 @@ func show_reward() -> void:
         var item := Button.new()
         item.add_theme_font_size_override("font_size", 13)
         item.text = ("✓ " if draft.has(id) else "+ ") + str(catalog[id].name)
-        item.disabled = draft.has(id) or draft.size() >= 5
+        item.disabled = draft.has(id) or draft.size() >= 5 or not Spell.compile(draft + [id]).valid
         item.tooltip_text = ("Equipped. " if draft.has(id) else "Owned; remove a slot to equip. " if draft.size() >= 5 else "Owned; add to next empty slot. ") + str(catalog[id].description)
+        if not draft.has(id) and not Spell.compile(draft + [id]).valid and draft.size() < 5:
+            item.tooltip_text = "Equip Bounce first." if id == "wall_charge" else "Equip Explode first."
         item.pressed.connect(func(): edit_draft("add", -1, id))
         row.add_child(item)
     var preview: Dictionary = Spell.compile(draft)
@@ -669,6 +779,8 @@ func toggle_pause() -> void:
 func finish_run(won: bool) -> void:
     state = "victory" if won else "death"
     effects.clear()
+    pending_spawns.clear()
+    delayed_blasts.clear()
     clear_panel()
     label_text("WARDEN DEFEATED" if won else "YOUR RUN ENDS", 32)
     label_text("%d / 6 trials cleared · %d enemies defeated" % [mini(encounter_index, 6), kills], 20)
@@ -766,6 +878,10 @@ func _draw() -> void:
     draw_set_transform(shake)
     Art.draw_arena(self, ARENA, layout, visual_time)
     if state != "menu":
+        for spawn in pending_spawns:
+            Art.draw_spawn_warning(self, spawn, visual_time)
+        for blast in delayed_blasts:
+            Art.draw_delayed_blast(self, blast, visual_time)
         for hazard in hazards:
             Art.draw_hazard(self, hazard, visual_time)
         for enemy in enemies:

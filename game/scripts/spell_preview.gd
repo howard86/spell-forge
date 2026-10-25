@@ -39,9 +39,10 @@ func restart(mode: String = "group") -> void:
                 sandbox.hurt_enemy(enemy, enemy.burn.dps * active, false)
                 if sandbox.elapsed >= enemy.burn.expires_at:
                     enemy.burn = {}
+        sandbox.update_delayed_blasts(1.0 / 60)
         sandbox.update_projectiles(1.0 / 60)
         sandbox.update_effects(1.0 / 60)
-        frames.append({"projectiles": sandbox.projectiles.duplicate(true), "enemies": sandbox.enemies.duplicate(true), "effects": sandbox.effects.duplicate(true)})
+        frames.append({"projectiles": sandbox.projectiles.duplicate(true), "enemies": sandbox.enemies.duplicate(true), "effects": sandbox.effects.duplicate(true), "blasts": sandbox.delayed_blasts.duplicate(true)})
     var damage := 0.0
     for enemy in sandbox.enemies:
         damage += enemy.max_hp - enemy.hp
@@ -56,6 +57,12 @@ func _process(delta: float) -> void:
         set_process(false)
 func point(value: Vector2) -> Vector2:
     return Vector2(12 + (value.x - 32) / 896 * (size.x - 24), 27 + (value.y - 220) * 0.25)
+func blast_boundary(origin: Vector2, radius: float) -> PackedVector2Array:
+    var boundary := PackedVector2Array()
+    for i in 33:
+        var angle := TAU * i / 32.0
+        boundary.append(point(origin + Vector2(cos(angle), sin(angle)) * radius))
+    return boundary
 func _draw() -> void:
     draw_rect(Rect2(Vector2.ZERO, size), Art.STONE.darkened(0.3))
     draw_string(ThemeDB.fallback_font, Vector2(10, 17), report, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.TEAL)
@@ -70,9 +77,14 @@ func _draw() -> void:
         if not enemy.burn.is_empty():
             draw_circle(pos + Vector2(0, -12), 3, Art.GOLD)
     for projectile in frame.projectiles:
-        draw_circle(point(projectile.position), 3, Art.GOLD if projectile.fire else Art.TEAL)
+        var color: Color = Color(0.55, 0.85, 1.0) if projectile.get("frost", false) else Art.GOLD if projectile.fire else Art.TEAL
+        draw_circle(point(projectile.position), 3, color)
+        if projectile.get("wall_charge", false) and projectile.get("wall_charged", false):
+            draw_arc(point(projectile.position), 5, 0, TAU, 12, Art.GOLD, 1)
+    for blast in frame.blasts:
+        draw_polyline(blast_boundary(blast.position, float(blast.radius)), Art.GOLD, 1)
     for effect in frame.effects:
         if effect.kind == "chain":
             draw_line(point(effect.origin), point(effect.target), Art.TEAL, 2)
         else:
-            draw_arc(point(effect.origin), effect.radius * 0.25, 0, TAU, 24, Art.GOLD, 2)
+            draw_polyline(blast_boundary(effect.origin, float(effect.radius)), Art.GOLD, 2)
