@@ -1,85 +1,54 @@
-# Spellforge — MVP Game Design Document
+# Spellforge — Current Game Design
 
-**Status:** Proposal, subject to prototype validation. **Audience:** Developer, testers, collaborators.
+**Status:** Integrated local demo candidate, subject to human validation. This describes implemented scope; desired comprehension, balance, pacing and replay outcomes remain hypotheses.
 
 ## Product thesis
 
-Spellforge is a real-time, top-down pixel-art roguelite in which players build a single active spell from ordered modular components. The differentiator is **behavioral spell composition**: every component should change tactics, not just increase damage.
+Build one active spell from ordered components, observe its behavior, revise an experiment and keep useful designs. Creative experimentation, mastery and ownership guide the reconstructed direction. [Octalysis research](OCTALYSIS_RESEARCH.md) supplies questions and evidence boundaries, not a numerical fun score.
 
-### Player experience pillars
-1. **Experimentation:** Every run offers interesting spell interactions.
-2. **Readability:** Powerful effects remain understandable on screen.
-3. **Short runs:** Aim for 10–15 minutes, restart quickly after death.
-4. **Meaningful trade-offs:** Power competes with mana cost, cooldown, positioning, and safety.
+## Implemented scope
 
-## MVP scope
-
-| Area | Scope |
+| Area | Current behavior |
 | --- | --- |
-| Platform | Windows PC; keyboard + mouse |
-| Core play | Move, aim, dodge, cast; combat in discrete arenas |
-| Run | Six encounters followed by one boss |
-| Player | One wizard, one active spell |
-| Spell crafting | Ordered-slot editor; eleven components |
-| Enemies | Six normal archetypes; one boss |
-| Level | One visual biome; small curated arena pool with randomized sequences |
-| Progression | Between-encounter component rewards; no permanent power tree |
-| Meta | Menu, settings, run summary, restart |
-| Run length | Target 10–15 minutes; to be verified |
+| Platform/input | Windows-first target; Godot 4.7.2; keyboard/mouse and controller paths with remapping and menu text entry. Physical-device and graphical Windows acceptance remain open. |
+| Player | One wizard; movement, aim, casting, dodge, mana regeneration and one active spell. |
+| Runs | Choose Forge/Warden or Archive/Archivist; each is six staged trials plus one boss. |
+| Starting setup | Ember: Projectile + Fire; Frost: Projectile + Frost. Standard five slots or optional four-slot challenge. |
+| Standard components | Projectile, Fire, Pierce, Split, Bounce, Chain, Explode, Cooldown, Frost, Wall Charge and Delayed Blast. |
+| Threats | Pursuer, Archer, Lane Archer, Bulwark, Swarm and Channeler; moving Warden and stationary Archivist bosses. |
+| Terrain | Open floor or authored reflector cover with shared movement/projectile/visibility rules; route choices have no stat/reward bonus. |
+| Experimentation | Ordered forge, reward inspection, six paired-preview scenarios, unrestricted standard practice and a skippable first experiment. |
+| Persistence | Recoverable local profile, named recipe grimoire, safe-forge resume, component discoveries, milestone lore and cosmetic workshop palette. |
+| Sharing/debrief | Manual versioned recipe/challenge codes; factual run report with bounded observations and retained aggregates. |
+| Accessibility | Scrollable focused menus, nested Back, controller text entry, large menu text, audio controls, reduced flashing and optional camera shake. |
 
-### Excluded from MVP
-Multiplayer, controller support, procedural open-world layouts, skill trees, online leaderboards, achievements, multiple characters/biomes, full graph-based spell programming, large narrative campaign, and live services.
+Menu-configured starters differ from legacy direct `start_run(seed)` calls, which retain the projectile-only Forge/open baseline for compatibility. The default engine still permits five components; the four-slot rule is a selected run constraint. Practice supplies all components temporarily and cannot unlock run ownership. No permanent combat-stat tree, multiplayer, account service, online leaderboard or full graph-based programming is implemented.
 
-## Core gameplay loop
-1. Start a seeded run with a basic projectile spell.
-2. Survive an arena against telegraphed enemy patterns.
-3. Choose one offered component/reward.
-4. Edit the ordered spell configuration between encounters.
-5. Balance damage/control against mana consumption, cooldown, and reliability.
-6. Defeat the boss or die, review results, and retry with new choices.
+## Player loop
 
-**Core mechanic test:** Can an unfamiliar player make two tactically different spells and explain when each is useful?
+1. Choose expedition, starter, cap and seed, or resume a saved safe forge.
+2. Fight warned waves using movement, cover, casting and dodge.
+3. Choose a component or recovery; inspect an offered component without committing it.
+4. Compare equipped and draft spells in the same labeled fixture, edit slots, or revisit a named recipe.
+5. Select the next Forge route, continue, or suspend at the forge.
+6. Defeat the expedition's boss or die, inspect factual results, and choose whether to retry or try another experiment.
 
-## Initial combat mechanics
-- Eight-direction movement with mouse aim, dodge with a short cooldown, and cast with left mouse button.
-- Enemy attacks use visible warnings and readable hit confirmation.
-- Health reaches zero => run ends; no mid-run revival for MVP.
-- Dodge grants a short, tuned defensive window; exact milliseconds are balance parameters, not promises.
-- Pause and modify spell only during safe reward/intermission scenes.
-- A limited resource model (mana and regeneration) discourages indiscriminate maximum-power casting.
+The Forge Warden moves and alternates fan/sweep/charge attacks. Archive uses reflector rooms and a stationary Archivist with fixed-gap ring bursts, delayed ground marks and a second phase. Cover has real collision and line-of-sight consequences. [EXPEDITIONS.md](EXPEDITIONS.md) records attack timing and geometry; no component is intended as a mandatory win key.
 
-## Enemy and encounter roster (proposed)
-1. **Pursuer:** Melee chaser; pressures movement.
-2. **Archer:** Slow telegraphed ranged projectiles.
-3. **Bulwark:** High frontal durability; encourages positioning.
-4. **Swarm:** Fragile, numerous; rewards AoE.
-5. **Channeler:** Wind-up area hazard; rewards interrupts or speed.
-6. **Boss — Runebound Warden:** Multiple clearly telegraphed attacks and at least one phase transition.
+## Learning and ownership
 
-The implemented balance expansion adds a sixth normal role, the Lane Archer, with a predicted lane that locks before firing. See [ADR 0002](decisions/0002-encounter-balance.md) for staged encounters and the current upgrade rules. These are gameplay roles, not committed art or lore.
+The first experiment asks the player to choose, predict, test and revise a Fire change. Practice offers all standard components on empty floor, while normal recipes can only equip owned components within the selected cap. Previews observe one actual cast for two seconds with explicit assumptions; their damage/kill output does not rank overall effectiveness or sustained DPS. See [diagnostics](COMPONENT_DIAGNOSTIC.md).
 
-## Content design constraints
-- Curated reusable arena layouts, with randomized enemy/reward combinations.
-- Every encounter must have sufficient safe space and a survivable pattern.
-- Random selections use a seed for reproducibility.
-- New spell rewards should offer a genuine decision, not strictly dominated choices.
-- Avoid requirements that force a specific component to win.
+Discoveries record component ownership after a cleared trial/reward or completed run, rather than proving tactical understanding. Milestones record first clear, Forge victory, Archive victory and four-slot victory. Workshop palettes change accent color only. Recipes persist an authored design, and portable challenges repeat the starting setup rather than all later route/reward decisions. The debrief suggests a next experiment without guessing death causes or enjoyment.
 
-## UX and accessibility baseline
-- Clear tooltips describing component effects, costs, and incompatibilities.
-- Distinguishable projectile/hazard silhouettes; do not depend on color alone.
-- Adjustable master/music/SFX volume, camera shake, and flashing effect intensity if implemented.
-- Readable pixel UI at intended display sizes; keyboard/mouse help in-game.
-- Fast restart and pause accessible without a tutorial.
+## Optional experiments
 
-## MVP success signals (hypotheses)
-- At least 10 mechanically distinct *viable* spell combinations.
-- In a small external playtest, aim for >=80% of testers to build spells unaided and >=60% to voluntarily replay.
-- Treat small-sample figures as directional usability evidence, not market conversion forecasts.
+The isolated Practice lab contains Frost-before-Split child slow, Split children excluding the parent's target, and a virtual-slot Repulse push candidate. They are implemented comparisons and remain unaccepted balance changes. Ordinary catalog/rules, profiles and share codes are unchanged. Any additional normal enemy remains an unimplemented optional candidate. See [SPELL_EXPERIMENTS.md](SPELL_EXPERIMENTS.md) for exact conditional rules and human acceptance work.
 
-## Open design decisions
-- Are duplicate modifiers allowed? Default recommendation: no, until balancing supports them.
-- Does Split fire on impact, expiry, or both? Document exact behavior before code.
-- How many component slots unlock per run? Start with a fixed small cap.
-- How is mana restored, and can a high-cost spell softlock a run?
-- Does Pierce trigger Explode on every contact? Explicitly constrain proc semantics.
+## Acceptance questions
+
+Can an unfamiliar player predict one changed slot, explain the observation, deliberately revisit a saved recipe and identify a useful next experiment after failure? Can players navigate each supported journey without assistance and describe the difference between the expeditions and terrain choices? Do they voluntarily replay, and why do they continue or stop?
+
+The 10–15-minute run target, ten situationally viable builds and comprehension/replay thresholds remain design hypotheses. Automated full-run pilots, test counts and exports do not establish them. Use [PLAYTEST.md](PLAYTEST.md), [INPUT_JOURNEY.md](INPUT_JOURNEY.md) and [PERFORMANCE.md](PERFORMANCE.md) to collect the missing human/hardware evidence. Final-head correctness, rendered capture, downloaded Windows behavior and Steam approvals are distinct [release gates](RELEASE.md).
+
+The [roadmap](ROADMAP.md) and [R01–R12 queue](roadmap_queue.json) are user-authorized reconstructions. The original ZIP is unavailable; detailed original SF-008–SF-029 requirements remain unknown in [ROADMAP_GAPS.md](ROADMAP_GAPS.md).

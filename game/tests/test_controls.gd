@@ -128,6 +128,9 @@ func run() -> void:
         InputMap.action_add_event("move_right", event)
     InputMap.action_set_deadzone("move_right", original_deadzone)
     check(InputMap.action_get_events("move_right") == original_events and InputMap.action_get_deadzone("move_right") == original_deadzone, "original movement InputMap restored")
+    for fixture_path in [scene.settings_path, scene.profile_path, scene.bindings_path]:
+        for suffix in ["", ".bak", ".tmp", ".bak.tmp"]:
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path + suffix))
     scene.queue_free()
     await create_timer(0.2).timeout
     print("Controls integration: %d checks, %d failures" % [checks, failures])

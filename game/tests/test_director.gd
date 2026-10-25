@@ -68,6 +68,56 @@ func check_encounters() -> void:
 	mutable.roster.clear()
 	check(Director.encounter(42, 2).roster.size() == 8, "Returned encounter cannot mutate authored templates")
 
+func check_expeditions() -> void:
+	# Captured from the unmodified director at ad162de using Godot 4.7.2.
+	var golden_layouts := {
+		-104729: [0, 0, 0, 2, 0, 0, 0],
+		0: [2, 1, 0, 2, 1, 0, 1],
+		42: [2, 1, 0, 2, 2, 1, 1],
+		2147483647: [1, 2, 0, 0, 2, 1, 2],
+	}
+	for seed_value in golden_layouts:
+		for index in range(7):
+			var original: Dictionary = Director.encounter(seed_value, index)
+			check(original == Director.encounter(seed_value, index, "forge", "open"), "Two-argument semantics remain Forge/open")
+			check(original.layout == golden_layouts[seed_value][index], "Forge preserves baseline RNG layout sequence")
+			check(original.expedition == "forge" and original.obstacles.is_empty(), "Default Forge keeps the open arena")
+			var reflected: Dictionary = Director.encounter(seed_value, index, "forge", "reflector")
+			for key in ["layout", "roster", "seed", "waves", "wave_threshold", "spawn_warning"]:
+				check(reflected[key] == original[key], "Route changes terrain without hidden encounter tuning")
+			check(reflected.obstacles.size() in [1, 2], "Reflector route supplies real cover")
+	var seen: Dictionary = {}
+	var variants: Dictionary = {}
+	for seed_value in range(64):
+		var total := 0
+		for index in range(7):
+			var archive: Dictionary = Director.encounter(seed_value, index, "archive")
+			check(archive == Director.encounter(seed_value, index, "archive"), "Archive replays from seed and room")
+			check(archive.expedition == "archive" and not archive.obstacles.is_empty(), "Archive always uses reflector terrain")
+			check(archive.seed == seed_value + index * 7919, "Archive retains explicit per-room seed")
+			if index == 6:
+				check(archive.waves == [["archivist"]] and archive.roster == ["archivist"], "Archive culminates in its own boss after six trials")
+				continue
+			check(archive.waves.size() == 2 and archive.roster.size() == 4 + index * 2, "Archive preserves finite trial counts")
+			var flattened: Array = []
+			for wave in archive.waves:
+				flattened.append_array(wave)
+			check(flattened == archive.roster, "Archive roster flattens waves in order")
+			for kind in archive.roster:
+				check(KINDS.has(kind), "Archive reuses existing normal enemy roles")
+				seen[kind] = true
+			variants["%d:%s" % [index, str(archive.waves)]] = true
+			total += archive.roster.size()
+		check(total == 54, "Archive has six trials and 54 normal enemies")
+	check(seen.size() == 6 and variants.size() == 12, "Archive exercises all six roles and twelve authored wave variants")
+	var mutable: Dictionary = Director.encounter(42, 2, "archive")
+	mutable.waves[0].clear()
+	mutable.roster.clear()
+	mutable.obstacles.clear()
+	var replay: Dictionary = Director.encounter(42, 2, "archive")
+	check(replay.roster.size() == 8 and replay.obstacles.size() == 2, "Archive results own mutable arrays")
+	check(Director.encounter(42, 0, "unknown") == Director.encounter(42, 0), "Unknown expedition falls back deterministically to Forge")
+
 func check_rewards() -> void:
 	var seen: Dictionary = {}
 	# Exhaust every ownership subset, including inconsistent imported ownership.
@@ -111,5 +161,6 @@ func check_rewards() -> void:
 func _initialize() -> void:
 	check_encounters()
 	check_rewards()
+	check_expeditions()
 	print("Run director: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

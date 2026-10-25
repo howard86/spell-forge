@@ -1,6 +1,8 @@
 extends RefCounted
 ## Original pixel silhouettes and masonry, drawn at integer coordinates.
 
+const Geometry = preload("res://scripts/arena_geometry.gd")
+const RADIAL_ARENA := Rect2(32, 88, 896, 416)
 const Audio = preload("res://scripts/game_audio.gd")
 const INK = Color("111726")
 const STONE = Color("283342")
@@ -18,7 +20,7 @@ static func _box(c: Node2D, p: Vector2, x: float, y: float, w: float, h: float, 
 static func _diamond(c: Node2D, p: Vector2, r: float, color: Color) -> void:
     c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)]), color)
 
-static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: float, progress: float, color: Color) -> void:
+static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: float, progress: float, color: Color, blocks: Array = []) -> void:
     # Capsule boundaries match distance-to-segment damage, including both end caps.
     var width := maxf(half_width, 0.0)
     var direction := origin.direction_to(target)
@@ -27,6 +29,20 @@ static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: 
     var normal := direction.orthogonal()
     var side := normal * width
     var fill := Color(color, 0.12)
+    if not blocks.is_empty():
+        var boundary := Geometry.lane_boundary(origin, target, width, RADIAL_ARENA, blocks)
+        if boundary.size() < 4:
+            return
+        c.draw_colored_polygon(boundary.slice(0, boundary.size() - 1), fill)
+        c.draw_polyline(boundary, color, 2)
+        var front := origin.lerp(target, clampf(progress, 0, 1))
+        _draw_lane_detail(c, front - side, front + side, Color("fff0c7"), 3, boundary)
+        var length := origin.distance_to(target)
+        for i in range(1, int(length / 42.0) + 1):
+            var point := origin + direction * minf(i * 42.0, length)
+            _draw_lane_detail(c, point - direction * 7 + normal * 4, point, color, 1, boundary)
+            _draw_lane_detail(c, point - direction * 7 - normal * 4, point, color, 1, boundary)
+        return
     if origin.distance_squared_to(target) > 0.001:
         c.draw_colored_polygon(PackedVector2Array([origin + side, target + side, target - side, origin - side]), fill)
     c.draw_circle(origin, width, fill)
@@ -44,12 +60,35 @@ static func _draw_lane(c: Node2D, origin: Vector2, target: Vector2, half_width: 
         c.draw_line(point - direction * 7 + normal * 4, point, color, 1)
         c.draw_line(point - direction * 7 - normal * 4, point, color, 1)
 
+static func _draw_lane_detail(c: Node2D, start: Vector2, finish: Vector2, color: Color, width: float, boundary: PackedVector2Array) -> void:
+    for line: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(PackedVector2Array([start, finish]), boundary):
+        c.draw_polyline(line, color, width)
+
 static func _draw_countdown(c: Node2D, position: Vector2, radius: float, progress: float, color: Color) -> void:
     c.draw_arc(position, radius, 0, TAU, 48, color, 2)
     c.draw_arc(position, maxf(radius - 4, 1), -PI / 2, -PI / 2 + TAU * maxf(clampf(progress, 0, 1), 0.001), 48, Color("fff0c7"), 3)
     for i in range(4):
         var direction := Vector2.from_angle(i * PI / 2)
         c.draw_line(position + direction * (radius - 3), position + direction * (radius + 5), color, 2)
+
+static func _draw_radial(c: Node2D, origin: Vector2, radius: float, blocks: Array, fill: Color, edge: Color, progress: float = -1.0) -> void:
+    if blocks.is_empty():
+        if fill.a > 0:
+            c.draw_circle(origin, radius, fill)
+        c.draw_arc(origin, radius, 0, TAU, 48, edge, 2)
+        if progress >= 0.0:
+            c.draw_arc(origin, maxf(radius - 4, 1), -PI / 2, -PI / 2 + TAU * maxf(clampf(progress, 0, 1), 0.001), 48, Color("fff0c7"), 3)
+        return
+    var boundary := Geometry.radial_boundary(origin, radius, RADIAL_ARENA, blocks, 48)
+    if boundary.size() < 4:
+        return
+    if fill.a > 0:
+        c.draw_colored_polygon(boundary.slice(0, boundary.size() - 1), fill)
+    c.draw_polyline(boundary, edge, 2)
+    if progress >= 0.0:
+        var countdown := Geometry.radial_boundary(origin, maxf(radius - 4, 1), RADIAL_ARENA, blocks, 48, -PI / 2, TAU * maxf(clampf(progress, 0, 1), 0.001))
+        if countdown.size() >= 2:
+            c.draw_polyline(countdown, Color("fff0c7"), 3)
 
 static func draw_arena(c: Node2D, rect: Rect2, layout: int, time: float) -> void:
     c.draw_rect(Rect2(0, 0, 960, 540), INK)
@@ -115,7 +154,18 @@ static func draw_player(c: Node2D, position: Vector2, aim: Vector2, dodging: boo
     _box(c, p, 1 if side > 0 else -3, -9, 2, 2, INK)
     _diamond(c, p + aim.normalized() * 24, 2, Color(0.6, 0.95, 0.88, 0.55))
 
-static func draw_enemy(c: Node2D, enemy: Dictionary, time: float) -> void:
+static func draw_obstacles(c: Node2D, blocks: Array) -> void:
+    for block: Rect2 in blocks:
+        c.draw_rect(block.grow(3), INK)
+        c.draw_rect(block, Color("566875"))
+        c.draw_rect(block, GOLD, false, 2)
+        c.draw_line(block.position + Vector2(3, 4), Vector2(block.end.x - 3, block.position.y + 4), TEAL, 2)
+        var center := block.get_center()
+        _diamond(c, center, 7, INK)
+        _diamond(c, center, 4, GOLD)
+        c.draw_string(ThemeDB.fallback_font, block.position + Vector2(0, -7), "COVER", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOLD)
+
+static func draw_enemy(c: Node2D, enemy: Dictionary, time: float, blocks: Array = []) -> void:
     var p: Vector2 = enemy.position.round()
     var kind: String = enemy.kind
     var r: float = enemy.radius
@@ -141,16 +191,26 @@ static func draw_enemy(c: Node2D, enemy: Dictionary, time: float) -> void:
             c.draw_line(snow - spoke, snow + spoke, ice, 2)
     if float(enemy.get("telegraph", 0.0)) > 0:
         var attack_kind: String = enemy.get("attack_kind", "")
-        if attack_kind in ["lane", "sweep", "charge"]:
+        if attack_kind == "ring":
+            for target: Vector2 in enemy.get("ring_targets", []):
+                c.draw_line(enemy.attack_origin, target, Color(1, 0.35, 0.4, 0.5), 1)
+            var angle: float = enemy.get("gap_angle", 0.0)
+            var half: float = enemy.get("gap_half", PI / 5)
+            c.draw_arc(p, r + 25, angle + half, angle + TAU - half, 48, RED, 3)
+            for edge in [-half, half]:
+                var direction := Vector2.from_angle(angle + edge)
+                c.draw_line(p + direction * (r + 8), p + direction * 115, TEAL, 3)
+            c.draw_string(ThemeDB.fallback_font, p + Vector2.from_angle(angle) * 85, "GAP", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, TEAL)
+        elif attack_kind in ["lane", "sweep", "charge"]:
             var origin: Vector2 = enemy.get("attack_origin", p)
             var target: Vector2 = enemy.get("attack_target", origin + facing * 210)
             var duration := maxf(float(enemy.get("warning_duration", 0.9)), 0.001)
             var progress := 1.0 - clampf(float(enemy.get("telegraph", 0.0)) / duration, 0, 1)
             var default_width := r if attack_kind == "charge" else (30.0 if attack_kind == "sweep" else 16.0)
-            _draw_lane(c, origin, target, float(enemy.get("attack_width", default_width)), progress, GOLD if attack_kind == "charge" else RED)
+            _draw_lane(c, origin, target, float(enemy.get("attack_width", default_width)), progress, GOLD if attack_kind == "charge" else RED, blocks)
         else:
             if kind in ["pursuer", "swarm", "bulwark"]:
-                var tip := p + facing * (45 if kind == "bulwark" else 68)
+                var tip: Vector2 = enemy.get("attack_target", p + facing * (45 if kind == "bulwark" else 68))
                 c.draw_line(p + facing * r, tip, GOLD, 3)
                 c.draw_line(tip, tip - facing.rotated(0.6) * 15, GOLD, 3)
                 c.draw_line(tip, tip - facing.rotated(-0.6) * 15, GOLD, 3)
@@ -166,6 +226,11 @@ static func draw_enemy(c: Node2D, enemy: Dictionary, time: float) -> void:
                 _diamond(c, sigil, 6, INK)
                 c.draw_line(sigil - Vector2(12, 0), sigil + Vector2(12, 0), GOLD, 2)
                 c.draw_line(sigil - Vector2(0, 12), sigil + Vector2(0, 12), GOLD, 2)
+    if float(enemy.get("telegraph", 0.0)) > 0 and enemy.kind == "archivist":
+        for mark: Vector2 in enemy.get("mark_positions", []):
+            _draw_radial(c, mark, 38, blocks, Color.TRANSPARENT, GOLD)
+            c.draw_line(mark - Vector2(8, 0), mark + Vector2(8, 0), GOLD, 2)
+            c.draw_line(mark - Vector2(0, 8), mark + Vector2(0, 8), GOLD, 2)
     _box(c, p, -r, r * 0.55, r * 2, 5, Color(0.02, 0.04, 0.08, 0.65))
     match kind:
         "pursuer":
@@ -218,6 +283,21 @@ static func draw_enemy(c: Node2D, enemy: Dictionary, time: float) -> void:
             _diamond(c, p + Vector2(0, -23), 5, GOLD)
             _box(c, p, -14, -8, 4, 10, Color("af97c3"))
             _box(c, p, 10, -8, 4, 10, Color("af97c3"))
+        "archivist":
+            var ink := Color("9586c5") if int(enemy.get("phase", 1)) == 1 else Color("d29ec5")
+            # Floating open tome, split robe and orbiting page tiles.
+            c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -34), p + Vector2(23, 18), p + Vector2(4, 12), p + Vector2(0, 24), p + Vector2(-4, 12), p + Vector2(-23, 18)]), INK)
+            c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -29), p + Vector2(16, 13), p + Vector2(0, 6), p + Vector2(-16, 13)]), ink)
+            _diamond(c, p + Vector2(0, -20), 8, GOLD)
+            _box(c, p, -20, -5, 18, 16, Color("e0d3af"))
+            _box(c, p, 2, -5, 18, 16, Color("e0d3af"))
+            c.draw_line(p + Vector2(0, -5), p + Vector2(0, 13), GOLD, 3)
+            for i in 3:
+                _box(c, p, -17, -1 + i * 4, 12, 1, INK)
+                _box(c, p, 5, -1 + i * 4, 12, 1, INK)
+            for i in 3:
+                var page_pos := p + Vector2.from_angle(time * 0.5 + i * TAU / 3) * 35
+                _box(c, page_pos, -3, -5, 6, 10, ink)
         "warden", "boss":
             var armor := Color("768d9b") if int(enemy.get("phase", 1)) < 2 else Color("b77d91")
             _box(c, p, -22, -23, 44, 44, INK)
@@ -272,20 +352,19 @@ static func draw_projectile(c: Node2D, projectile: Dictionary, _time: float) -> 
             var spoke := Vector2.from_angle(i * PI / 3) * (r + 4)
             c.draw_line(p - spoke, p + spoke, ice, 1)
 
-static func draw_hazard(c: Node2D, hazard: Dictionary, _time: float) -> void:
+static func draw_hazard(c: Node2D, hazard: Dictionary, _time: float, blocks: Array = []) -> void:
     if hazard.get("kind", "circle") == "lane":
         var origin: Vector2 = hazard.get("origin", Vector2.ZERO)
         var target: Vector2 = hazard.get("target", origin)
-        _draw_lane(c, origin, target, float(hazard.get("width", 16.0)), float(hazard.get("progress", 0.0)), RED)
+        _draw_lane(c, origin, target, float(hazard.get("width", 16.0)), float(hazard.get("progress", 0.0)), RED, blocks)
         return
     var p: Vector2 = hazard.position
     var r: float = hazard.radius
     var progress: float = clampf(hazard.get("progress", 0.0), 0, 1)
-    c.draw_circle(p, r, Color(0.9, 0.3, 0.27, 0.1))
-    c.draw_arc(p, r, 0, TAU, 32, RED, 2)
-    c.draw_arc(p, r - 4, -PI / 2, -PI / 2 + TAU * maxf(progress, 0.001), 32, GOLD, 3)
-    for i in range(4):
-        _diamond(c, p + Vector2.from_angle(i * PI / 2) * r, 4, RED)
+    _draw_radial(c, p, r, blocks, Color(0.9, 0.3, 0.27, 0.1), RED, progress)
+    if blocks.is_empty():
+        for i in range(4):
+            _diamond(c, p + Vector2.from_angle(i * PI / 2) * r, 4, RED)
     c.draw_line(p - Vector2(5, 5), p + Vector2(5, 5), RED, 2)
     c.draw_line(p + Vector2(-5, 5), p + Vector2(5, -5), RED, 2)
 
@@ -303,13 +382,12 @@ static func draw_spawn_warning(c: Node2D, spawn: Dictionary, _time: float) -> vo
     c.draw_line(position + Vector2(-4, 10), position + Vector2(0, 14), Color("fff0c7"), 2)
     c.draw_line(position + Vector2(4, 10), position + Vector2(0, 14), Color("fff0c7"), 2)
 
-static func draw_delayed_blast(c: Node2D, blast: Dictionary, _time: float) -> void:
+static func draw_delayed_blast(c: Node2D, blast: Dictionary, _time: float, blocks: Array = []) -> void:
     var position: Vector2 = blast.get("position", Vector2.ZERO)
     var radius := maxf(float(blast.get("radius", 72.0)), 1.0)
     var duration := maxf(float(blast.get("duration", 0.6)), 0.001)
     var progress := 1.0 - clampf(float(blast.get("remaining", duration)) / duration, 0, 1)
-    c.draw_circle(position, radius, Color(0.9, 0.73, 0.47, 0.08))
-    _draw_countdown(c, position, radius, progress, GOLD)
+    _draw_radial(c, position, radius, blocks, Color(0.9, 0.73, 0.47, 0.08), GOLD, progress)
     # Central burst rune distinguishes the player's queued blast from hostile X marks.
     _diamond(c, position, 8, GOLD)
     _diamond(c, position, 4, INK)

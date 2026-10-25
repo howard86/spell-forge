@@ -254,6 +254,9 @@ func run() -> void:
     check(game.settings.master == 0.25 and game.settings.reduced_flash, "settings survive reload")
     game.settings = original
     DirAccess.remove_absolute(ProjectSettings.globalize_path(game.settings_path))
+    for fixture_path in [game.settings_path, game.profile_path, game.bindings_path]:
+        for suffix in ["", ".bak", ".tmp", ".bak.tmp"]:
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture_path + suffix))
     game.queue_free()
     await process_frame
     await create_timer(0.15).timeout

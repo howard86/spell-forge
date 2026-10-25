@@ -129,7 +129,28 @@ func test_delayed_blast() -> void:
 		var events: Array = EngineRules.resolve_hit(ordered, bolt(), 1, [])
 		check(count_type(events, "split") == row.splits and count_type(events, "delayed_explode") == row.blasts and ordered.effects_used == row.used, "Delayed replacement preserves slot-ordered budget semantics")
 
+func test_chain_eligibility() -> void:
+	var compiled := EngineRules.compile(["projectile", "pierce", "chain"])
+	var cast := EngineRules.new_cast(30, compiled)
+	var projectile := bolt()
+	var targets := [{"id": 2, "position": Vector2(10, 0)}, {"id": 3, "position": Vector2(0, 20)}, {"id": 4, "position": Vector2(0, 30)}]
+	var visible := func(_origin: Vector2, target: Vector2) -> bool: return target.x == 0
+	var events := EngineRules.resolve_hit(cast, projectile, 1, targets, visible)
+	check(events.size() == 3 and events[1].target_id == 3 and events[2].target_id == 4, "Chain chooses nearest eligible targets before consuming hops")
+	check(cast.chain_hops == 2 and cast.effects_used == 3 and not cast.visited.has(2), "Hidden candidates consume no hop, effect, or visit")
+	projectile.position = Vector2(0, 20)
+	var later := EngineRules.resolve_hit(cast, projectile, 3, targets)
+	check(count_type(later, "chain") == 1 and later[1].target_id == 2 and cast.chain_hops == 3, "Later contact can spend the remaining hop when visibility changes")
+	var blocked := EngineRules.new_cast(31, compiled)
+	var blocked_events := EngineRules.resolve_hit(blocked, bolt(), 1, targets, func(_origin, _target): return false)
+	check(blocked_events.size() == 1 and blocked.chain_hops == 0 and blocked.effects_used == 1 and blocked.visited.size() == 1, "Entirely hidden chain emits only the accepted direct hit")
+	var open_cast := EngineRules.new_cast(32, compiled)
+	var default_events := EngineRules.resolve_hit(open_cast, bolt(), 1, targets)
+	var explicit_events := EngineRules.resolve_hit(EngineRules.new_cast(32, compiled), bolt(), 1, targets, func(_origin, _target): return true)
+	check(default_events == explicit_events and open_cast.chain_hops == 3, "Open-floor chain event order and hop count are unchanged")
+
 func _initialize() -> void:
+	test_chain_eligibility()
 	test_upgrade_compilation()
 	test_upgrade_impacts()
 	test_delayed_blast()

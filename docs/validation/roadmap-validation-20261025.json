@@ -1,0 +1,241 @@
+{
+  "date": "2026-10-25",
+  "baseline": "ad162dea962fee8aa7bc2d077edaf5e1283b1363",
+  "engine": "4.7.2.stable.official.ed1daf0bf",
+  "numeric_checks": 98040,
+  "suites": [
+    {
+      "suite": "spells",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Spell engine: 200 checks, 0 failures; 12 builds"]
+    },
+    {
+      "suite": "run",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Run integration: 87 checks, 0 failures"]
+    },
+    {
+      "suite": "director",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Run director: 71125 checks, 0 failures"]
+    },
+    {
+      "suite": "balance",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Balance integration: 41 checks, 0 failures"]
+    },
+    {
+      "suite": "controls",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Controls integration: 26 checks, 0 failures"]
+    },
+    {
+      "suite": "ui",
+      "passed": true,
+      "exit": 0,
+      "summary": ["UI integration: 301 checks, 0 failures"]
+    },
+    {
+      "suite": "stress",
+      "passed": true,
+      "exit": 0,
+      "summary": [
+        "STRESS_OK: 10000 maximum-trigger casts; 800000 contact attempts; all budgets bounded"
+      ]
+    },
+    {
+      "suite": "report",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Run report: 69 checks, 0 failures"]
+    },
+    {
+      "suite": "registry",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Content registry: 24 checks, 0 failures"]
+    },
+    {
+      "suite": "profile",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Profile: 139 checks, 0 failures"]
+    },
+    {
+      "suite": "sharing",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Sharing: 83 checks, 0 failures"]
+    },
+    {
+      "suite": "preview",
+      "passed": true,
+      "exit": 0,
+      "summary": ["PREVIEW_TESTS: 69 checks, 0 failures"]
+    },
+    {
+      "suite": "geometry",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Arena geometry: 24714 checks, 0 failures"]
+    },
+    {
+      "suite": "journey",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Journey integration: 57 checks, 0 failures"]
+    },
+    {
+      "suite": "bindings",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Bindings/navigation: 86 checks, 0 failures"]
+    },
+    {
+      "suite": "world_runtime",
+      "passed": true,
+      "exit": 0,
+      "summary": ["World runtime: 269 checks, 0 failures"]
+    },
+    {
+      "suite": "input_journey",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Input journey: 324 checks, 0 failures"]
+    },
+    {
+      "suite": "experiments",
+      "passed": true,
+      "exit": 0,
+      "summary": ["Experimental lab: 426 checks, 0 failures"]
+    }
+  ],
+  "stress": {
+    "casts": 10000,
+    "contact_attempts": 800000
+  },
+  "captures": {
+    "sizes": ["960x540", "1280x720"],
+    "screens_per_size": 14
+  },
+  "package_smoke": {
+    "macos_headless_checks": 19,
+    "macos_rendered_checks": 20,
+    "failures": 0,
+    "windows_execution": "not performed locally; hosted CI required"
+  },
+  "source_sha256": {
+    "game/README.md": "c307dad609d7367bebe264b2c80edd1d76ee448f2dd80a5a28b9930e4daa9a31",
+    "game/project.godot": "1fedb4a1d6781519e60d594740e0fa611192dc86d66f133bb7afe4cbdba1dc21",
+    "game/export_presets.cfg": "29da5f1f5deaddf98c3f2d329056ac624ceedb6843867e71d52f4ef9680c510f",
+    "game/scenes/main.tscn": "39cedc2e9bac926667cb0d6dd4ea63be459a910ce9963bcb28110bcf808bd0e7",
+    "game/tests/test_report.gd.uid": "ac8e7c4ac431798d7d6133ebc0d11f54f1e28b0fab69aa43ab5e9b0eef06d396",
+    "game/tests/probe_runtime.gd": "86471e56196bbaca64bdf0daccb42020f98ba78fd422bbc06a1c901028ee7532",
+    "game/tests/probe_components.gd": "749e048a23dbf8ea8b9fa76524ad43817cab11eb9f619115b38a4a0b49def3f1",
+    "game/tests/test_run.gd.uid": "fe82fe25d8e2c1976f74382f1cb8ad11099d3c74e8066cbb316c588461312c4e",
+    "game/tests/test_geometry.gd.uid": "c967888e7e722192bc3019d062637ddd9fc40e8fd4d5bc64ab3aa9d68d7c3690",
+    "game/tests/test_journey.gd": "8b401ca143a65f46b69a91fc5ea2bee4816339750bc9f4e8ea5ae8d97dca2179",
+    "game/tests/test_world_runtime.gd": "45cf8f9b38d02bad39ebc634ef97f8d2d79031c60f0764a1ebde707ef6691f7a",
+    "game/tests/test_director.gd": "3ae00eb338fd4195690fbd531052b6d832ec20414659e4ded17caa3d6c9d0c45",
+    "game/tests/capture_ui.gd.uid": "44fc62d094ee73aa0868a26190738991989d305eda967de3f8405f5ce58620d5",
+    "game/tests/test_geometry.gd": "40affb9cdb6876f245133b892e3403c84517891064cc47ec3247227fff5fe3a0",
+    "game/tests/test_spells.gd": "c42dc8003ca7509cd0efc2e69e5e7d85417c5bf19aa656bfefd57a37ffa646ec",
+    "game/tests/test_preview.gd.uid": "3f444816ac6cccc15ffa33a390829abcc1f0885403a16d0f75ad8d16a9d71802",
+    "game/tests/probe_playthrough.gd": "d5b194781476140af07233401004f151e19f121dbb5dd6ce5abc282ddbd6571d",
+    "game/tests/probe_runtime.gd.uid": "1dab432ecc3f58113a7145e1a6a6791efa7efb1b394e21965750b77cfa708d02",
+    "game/tests/test_director.gd.uid": "df6d0adfb10325c2c6b0da9ebd538b8123d7179b4302458466c9013874c77da5",
+    "game/tests/test_bindings.gd": "0be6c748d9b0e993d0b818991f4b46cbef19c413f4cd48d38c5b08f3bcfd8450",
+    "game/tests/test_balance.gd": "419a62f6f90bd4913d9dc8935bccc931f2938071b5aa6468772397367a2cbee1",
+    "game/tests/test_experiments.gd": "1af259e9a494b52be447703729d783df2f959d609f17457aaf6d3fc63e955c83",
+    "game/tests/test_bindings.gd.uid": "163d775ca6b46da5837195faefe13689f16cd1ca7ded7628d16e39642f6077f2",
+    "game/tests/test_journey.gd.uid": "1ab6cfb1e9aa213b897d6ae2262f8c134c2b0fc6a3ccdcbb0d9ac47b6d4bb6b4",
+    "game/tests/test_spells.gd.uid": "067e2a8c0fc3d4e457561b0bbafcaee4e03471b1543c7c461fd814f84b061c3d",
+    "game/tests/probe_balance.gd": "94a189fe7fed2906f1384b6f49b21f5525553eb4ffa2c6e6014bef03527cb456",
+    "game/tests/test_preview.gd": "ad511cab38ee8c3d0178f14627f03e9dfe701e9f4119861addf92f2c84bffaa5",
+    "game/tests/test_stress.gd.uid": "32980c2cdcb61d088b29f9a79d022eb0d05a104882b7c991654f059d72005679",
+    "game/tests/test_profile.gd.uid": "68899b3d4c3ea0ecfdc1c59c8be1cb5e323581359ec08e9d3486f8032c9f38b4",
+    "game/tests/test_sharing.gd": "644d171c4ad5848b3280450f3484bfc1f3dd760434390abeb220e03357d25213",
+    "game/tests/test_balance.gd.uid": "1bfdc2d473f5a06ad8f36560e45a09bba1ce2aa03c37cdd3b92bc0bcf3ebbe10",
+    "game/tests/test_sharing.gd.uid": "9e05148c316e31a1f3b1fb4da0bdc78d455f92e08c0dd45f0c9bd11255f93001",
+    "game/tests/test_stress.gd": "154f16527f02994a21c6934f0afefaff8215ba063baaff402ac2d28ded59bece",
+    "game/tests/probe_balance.gd.uid": "0c65f89f1a3fc5c5d25cc91f395d2b49a8c9b84b1a40007846f3d70b7d79a941",
+    "game/tests/test_registry.gd": "0351b9a1a74602fd8e9aa1174a9ef0ed150f293a0e377ca68f4c769c02638256",
+    "game/tests/test_experiments.gd.uid": "55473121dd9b7a5a9439eabe3f16dfe9202eaa33d8c1790018c36f152261955b",
+    "game/tests/test_ui.gd.uid": "1b63bd9d1f1021ab2cdc050c0770aa33561c2db1eb9539d5cdafcda316cc1049",
+    "game/tests/test_report.gd": "bf880ec932a6eeae544fdfdba82a3da662d552764a9af7784b749a84c5c32825",
+    "game/tests/test_ui.gd": "244b670accd26a487d2cd93024a527e2c3c16f0f1a4dbc9d6cc5bde13f84c83d",
+    "game/tests/capture_ui.gd": "6f6101f0e70677ff27a7ece3c98ddb65f5058a6a15f143ab14e483382e3084e3",
+    "game/tests/test_profile.gd": "54b8ddd6e53bf13cfbd400ffd4615808564397146959cec1dce1fb9a074359f4",
+    "game/tests/test_input_journey.gd": "7ba5082b1c3cc059ecb96675a94c652a18bcd568ba939857bff84e82f1b050f9",
+    "game/tests/probe_playthrough.gd.uid": "75397a724c070a7d1ab695c4175ea05bb2ce6c77491518be36df4d88dbcca07d",
+    "game/tests/test_world_runtime.gd.uid": "13d46831258b4d61eca4080574eb90823fc4bfd815f3d2e74dcd2c8bd432fee2",
+    "game/tests/test_controls.gd.uid": "7a670f0fe9537d7f10433287d328ca3f466557bf5aa475513c80d6fb7e8d3a08",
+    "game/tests/test_run.gd": "d05121a9715e8c6ef470ac65dde99a1d3139d511e04d9b2069685c968bb849f8",
+    "game/tests/test_input_journey.gd.uid": "84a9d8e4eaa21c8603b8a76ef825a3552a5f71d26297105d62c179a58ae070b6",
+    "game/tests/test_registry.gd.uid": "23ac358721068f6ec57d4520a377c1aa8d97e3821e8ce0cb10820fe2a0ff3035",
+    "game/tests/probe_components.gd.uid": "a9021d7f2a930ef81bd729c7ada91c72e161006f1b2a55d4356d1f64397c91df",
+    "game/tests/test_controls.gd": "7b5e85bc59e041a3993338cdda7c7a73fe629865cc4e4930391cc101195850cd",
+    "game/scripts/combat_hud.gd.uid": "b9a2135e494eb7f8b0cfe98887c3c80582f8416baa10122f9e5c25b4236766a3",
+    "game/scripts/export_smoke.gd.uid": "1e38696654813c46ad5765ed10831baf593bbcf48aab75ff412599e0c6ceac19",
+    "game/scripts/share_code.gd": "50b274a02030c51ae34d5076b4e30dc2104ae9fb741a044b94ac13d8436641f9",
+    "game/scripts/runtime_probe.gd.uid": "605c15a60412d1edf43802e828dbf398c63bd620c7983017529e25f554ad00c5",
+    "game/scripts/arena_geometry.gd.uid": "d1eb0033f6a8960c688c8a5d178e7f287dec61b46616ea5d93fe65d847cdc219",
+    "game/scripts/spell_preview.gd.uid": "4367cd536243b40d65128a2b413b92da29a4793f9435fae0047c8e21f2474401",
+    "game/scripts/journey_ui.gd.uid": "2fec414f40cea4e98ea6abb130e2c8f03c92e376787d95a3355b822f946a6cf0",
+    "game/scripts/menu_navigation.gd": "3468da9f2317ba8a16d99f2a0ff79c520174294ef1db4a1b22effee47eb46d05",
+    "game/scripts/content_registry.gd": "86b999e652d6a3a5c4b7fee6eeb7f076e381de3a46101f02fbf18f1c731e5bef",
+    "game/scripts/spell_lab.gd": "cff501242cedbb1d6cafd24ef712f97a7de162ce01bd1387f18c0553eb750a38",
+    "game/scripts/presentation.gd": "030edd41e093f5a83508a1d87e38a0521c46d33f53f648034bf5d89eacacf623",
+    "game/scripts/player.gd": "67410e233d880ddef949812265b862f348c4a7c89de595d25afee76dd9cbd00f",
+    "game/scripts/experimental_spell_runtime.gd.uid": "c058ef2047950d363f12219dc7bbf05632c94a1adee1a51006ae25bc8c5f6e21",
+    "game/scripts/player_profile.gd": "ae8379c0173949f408f9c3311139849b5aa3e8c7cd76ac12dfacc20930925378",
+    "game/scripts/run_director.gd": "8e685d8e63996a27dd7188fa92c23fa7e329d8d582db2693ce1d28160eec69d3",
+    "game/scripts/preview_scenarios.gd.uid": "0230dbdacfc57984e70ce5ab6f60cbd7b0f95c7e03e5207e7fb78fa1e74435fd",
+    "game/scripts/game_audio.gd.uid": "e729b08ed0117ca86431fb1044ca3c0a992f9f72880177c438fba362d4f5d1f4",
+    "game/scripts/content_registry.gd.uid": "704b81b53f2c1fa63b135575fa9b68a0324d4459607b76e9779f8e735e04c094",
+    "game/scripts/experimental_spell_runtime.gd": "f4471b0dfb9908a4762caacca8a839227c2a683be2c686eb4991037441135bde",
+    "game/scripts/spell_lab.gd.uid": "090786c5b3eb1e6295cc3bd05507f05a18da8cf5163af28e190f726f80037f7f",
+    "game/scripts/share_code.gd.uid": "cf4c0cb92128e40e02a44e5979db2de6758bc02335aaed279b09b90176f00ae0",
+    "game/scripts/spell_engine.gd": "888587599d54b268a0e90f5d0ef861e89ed2f783c1d59e361ec7450c0d405ba8",
+    "game/scripts/run_report.gd.uid": "aab7da8579c3d772dc67c6bd9276a22cf4a9b0b536058e23d650523a678952c5",
+    "game/scripts/runtime_probe.gd": "e6647738f6935176a44ad163c434f131a8f17f88043ca766335536f5121aca23",
+    "game/scripts/game_audio.gd": "2ab6597c7b73e90c0889bd865025022de9bc0fb15eefb649fbd81fc638a928e1",
+    "game/scripts/player.gd.uid": "c12e2584ca295ba156591ad349f439aa59631f4e537678645ad4788a622d176e",
+    "game/scripts/input_bindings.gd": "0b457988ad9ca34d0bbd843f0004fc6c8b2c54cdd2947b8acf9b4dac254bfcf4",
+    "game/scripts/run_director.gd.uid": "9b733de87f88d6d2d6abed2e6caa4dc07853240349b4b2c8109b37a5da87a176",
+    "game/scripts/run_report.gd": "93fd6df195774284adbe78fc00d050c21c0e3551c999681bd977d4210da9507d",
+    "game/scripts/menu_navigation.gd.uid": "d33b45fb5037a7d22c4475367fd32731a1f08e0ec7a5c8cf8c23d4de7a5ff559",
+    "game/scripts/spell_engine.gd.uid": "a36afbc5523d0480f0e84bf9297c5372eb6ad81ef900495028df44cbd949397a",
+    "game/scripts/text_entry.gd": "768b0a6c1613829daddbe361836e7677dabff8423d99835b06e72a45cba35fc2",
+    "game/scripts/game.gd.uid": "89bae3c3c6ec47d5d40cc32e76207b040d211fa6a1ef542c65b8d523c99f262f",
+    "game/scripts/input_bindings.gd.uid": "3a0f87191b4d51a43e263df245d54d35f8e187182c0a43802757f14590af7e87",
+    "game/scripts/preview_scenarios.gd": "0176853f55e450505e23907d17222e6f96864583261b78f73b3cc35f49048a4b",
+    "game/scripts/export_smoke.gd": "165b937e00591e9b7833b5099b2cc962e7abda50424e2397d71f1bd5c12102fe",
+    "game/scripts/text_entry.gd.uid": "1035714218d5e54d89c108b2d2c01e8cb54e7cbd9c73a1c0eec6df072390d2df",
+    "game/scripts/presentation.gd.uid": "616ac05035c397ae576487928510f724f9c2e4d21200f309d54510a1f2e76919",
+    "game/scripts/spell_preview.gd": "7bbd57353d31ddcf32e966fb367e97e45fd6eb002b2d470d2a4f50865183f170",
+    "game/scripts/game.gd": "2cdf84be659fb2d906b544e56a415822f2016f2914013ef31618b1bb152f4945",
+    "game/scripts/player_profile.gd.uid": "7809308fe57f449c1e869a8f5d59c2438da76a21427b5015ac201eb276c0b512",
+    "game/scripts/combat_hud.gd": "eb2f2118af24b6008b3b6d1f7daeb4d44ba700a1f5ca639865a4d11ee9daa7b8",
+    "game/scripts/arena_geometry.gd": "46c62f4d904c5c7d46755a5ba7a847ea89ce61a9a0c97dc14e5e5e764ae5449f",
+    "game/scripts/journey_ui.gd": "b393ffc814b9e61a25f621652305e867badea19b2b1cb34471609a0d8695a0d0",
+    "game/assets/PROVENANCE.md": "5077a4d51efa957fa8d0205dcb123a2314c03cf5c331d08209b82e93347ff13d",
+    "game/assets/LICENSE.txt": "e98ac4e02bfe222deaf4230721dbfafdae0b30c9f9e82aee13122b5e6b632421"
+  },
+  "artifacts_sha256": {
+    "Windows_debug.exe": "91a675cd254fe1207872a82543d3b0a168f0566d312227eb7994aef4a88ab176",
+    "macOS_debug_binary": "e6aaab86820c69f79296fda5e77db22997ac24d2650deab00dd22330215215ab",
+    "macOS_pack": "9c605ff7992a314a12d250913ffdacc673ef39ebe28d78f4771e597ebba560ec"
+  },
+  "limits": [
+    "Original SF-008\u2013SF-029 specifications unavailable; reconstruction authorized.",
+    "Physical controllers and human balance/usability remain untested.",
+    "Boss frame intervals exceed 16.67ms in baseline and candidate; no frame-budget acceptance.",
+    "macOS diagnostic is unsigned, with export-only ETC2/ASTC setting; not a distribution build."
+  ]
+}

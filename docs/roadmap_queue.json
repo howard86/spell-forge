@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "source": "User-authorized reconstruction of Game roadmap research, 2026-10-25",
+  "baseline": "ad162dea962fee8aa7bc2d077edaf5e1283b1363",
+  "original_task_archive_available": false,
+  "acceptance_states": [
+    "implemented",
+    "automated_validation_passed",
+    "experience_validated",
+    "accepted_for_release"
+  ],
+  "packages": [
+    {
+      "id": "R01",
+      "title": "Reconstruct roadmap, source register, and evidence boundaries",
+      "known_original_tasks": ["SF-001"],
+      "depends_on": [],
+      "scope": [
+        "research",
+        "current-state documentation",
+        "playtest protocol",
+        "gap ledger"
+      ]
+    },
+    {
+      "id": "R02",
+      "title": "Stable identities and bounded factual run reports",
+      "known_original_tasks": ["SF-002"],
+      "depends_on": ["R01"],
+      "scope": [
+        "versioned identities",
+        "time buckets",
+        "choice attribution",
+        "damage and resource observations"
+      ]
+    },
+    {
+      "id": "R03",
+      "title": "Recoverable local profiles and portable designs",
+      "known_original_tasks": [],
+      "depends_on": ["R02"],
+      "scope": [
+        "backup recovery",
+        "named recipes",
+        "discoveries",
+        "checkpoint validation",
+        "recipe and challenge codes"
+      ]
+    },
+    {
+      "id": "R04",
+      "title": "Truthful forge comparisons and situational diagnostics",
+      "known_original_tasks": ["SF-003", "SF-005"],
+      "depends_on": ["R02"],
+      "scope": [
+        "paired runtime previews",
+        "six tactical scenarios",
+        "resource assumptions",
+        "reproducible component diagnostic"
+      ]
+    },
+    {
+      "id": "R05",
+      "title": "Complete the persistent player journey",
+      "known_original_tasks": ["SF-004", "SF-030"],
+      "depends_on": ["R03", "R04"],
+      "scope": [
+        "skippable first experiment",
+        "practice forge",
+        "grimoire",
+        "prospective reward inspection",
+        "forge suspend and resume",
+        "workshop",
+        "sharing UI",
+        "factual debrief"
+      ]
+    },
+    {
+      "id": "R06",
+      "title": "Routes and real collision terrain",
+      "known_original_tasks": [],
+      "depends_on": ["R05"],
+      "scope": [
+        "visible route choice",
+        "reflector geometry",
+        "movement and spawn safety",
+        "projectile and warning parity",
+        "preview parity"
+      ]
+    },
+    {
+      "id": "R07",
+      "title": "Second boss and alternative expedition",
+      "known_original_tasks": [],
+      "depends_on": ["R06"],
+      "scope": [
+        "Archivist patterns",
+        "six Archive trials plus boss",
+        "two starting spells",
+        "optional four-slot mastery",
+        "retry and sharing setup"
+      ],
+      "experience_gate": "Keep the expansion a draft candidate until boss readability and distinct tactical choices have human evidence."
+    },
+    {
+      "id": "R08",
+      "title": "Complete controls and accessibility journeys",
+      "known_original_tasks": [],
+      "depends_on": ["R05", "R07"],
+      "scope": [
+        "remapping",
+        "controller combat",
+        "menu focus and Back",
+        "controller text entry",
+        "readable UI",
+        "reduced motion and flashing"
+      ]
+    },
+    {
+      "id": "R09",
+      "title": "Optional spell experiments",
+      "known_original_tasks": ["SF-006", "SF-007"],
+      "depends_on": ["R04"],
+      "scope": [
+        "Frost/Split ordering prototype",
+        "single-variable Split comparison",
+        "Repulse candidate"
+      ],
+      "experience_gate": "Experimental candidates must not silently change ordinary runs or become accepted balance without evidence."
+    },
+    {
+      "id": "R10",
+      "title": "Verify presentation, performance, packaging, and provenance",
+      "known_original_tasks": [],
+      "depends_on": ["R07", "R08"],
+      "scope": [
+        "full regression",
+        "rendered journey captures",
+        "representative performance probe",
+        "export and packaged smoke",
+        "asset provenance",
+        "release evidence"
+      ]
+    },
+    {
+      "id": "R11",
+      "title": "Human and target-hardware acceptance",
+      "known_original_tasks": [],
+      "depends_on": ["R10"],
+      "scope": [
+        "blind construction",
+        "interaction comprehension",
+        "voluntary replay",
+        "two expeditions",
+        "physical controller",
+        "graphical Windows journey",
+        "specified target-hardware frame times"
+      ],
+      "experience_gate": "Requires observations from people and the intended hardware; automated checks cannot satisfy this package."
+    },
+    {
+      "id": "R12",
+      "title": "Release decision",
+      "known_original_tasks": [],
+      "depends_on": ["R11"],
+      "scope": [
+        "accepted scope reconciliation",
+        "named artifact",
+        "storefront requirements if applicable",
+        "explicit publication authorization"
+      ]
+    }
+  ]
+}
