@@ -25,6 +25,22 @@ func bounds(node: Node) -> void:
             var rect: Rect2 = child.get_global_rect()
             check(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= 960.1 and rect.end.y <= 540.1, "journey UI fits: %s %s" % [child.name, rect])
         bounds(child)
+func button_named(node: Node, title: String) -> Button:
+    for child in node.get_children():
+        if child is Button and child.text == title:
+            return child
+        var found := button_named(child, title)
+        if found != null:
+            return found
+    return null
+func select_preview(game: Node, scenario: String) -> void:
+    var preview = game.content.find_child("SpellPreview", true, false)
+    var index: int = preview.Scenarios.IDS.find(scenario)
+    preview.picker.select(index)
+    preview.picker.item_selected.emit(index)
+func preview_is(game: Node, scenario: String) -> bool:
+    var preview = game.content.find_child("SpellPreview", true, false)
+    return preview.scenario == scenario and preview.comparison.equipped.scenario == scenario and preview.comparison.draft.scenario == scenario
 func snapshot(game: Node) -> Array:
     return [game.hp, game.mana, game.kills, game.elapsed, game.owned.duplicate(), game.components.duplicate(), game.draft.duplicate(), game.report.snapshot(), game.profile.data.duplicate(true)]
 func run() -> void:
@@ -126,8 +142,20 @@ func run() -> void:
     check(game.practice and game.owned.size() == game.Spell.catalog().size() and game.state == "practice", "practice exposes full catalog")
     await settle()
     bounds(game.panel)
+    select_preview(game, "moving")
     game.edit_draft("add", -1, "fire")
+    check(preview_is(game, "moving"), "adding a component keeps the selected moving fixture for both spells")
+    select_preview(game, "boss")
     game.edit_draft("add", -1, "pierce")
+    check(preview_is(game, "boss"), "adding another component keeps the selected boss fixture")
+    game.edit_draft("left", 2)
+    check(preview_is(game, "boss"), "reordering a component keeps the selected boss fixture")
+    game.edit_draft("remove", 1)
+    check(preview_is(game, "boss"), "removing a component keeps the selected boss fixture")
+    var wall := button_named(game.content, "Wall shot ↻")
+    wall.pressed.emit()
+    game.edit_draft("add", -1, "pierce")
+    check(preview_is(game, "wall"), "wall shortcut becomes the fixture used after the next edit")
     check(game.draft == ["projectile", "fire", "pierce"], "practice reuses real forge editor")
     var live_report: Dictionary = game.report.snapshot()
     Preview.evaluate(game, game.draft, "group")
@@ -143,6 +171,17 @@ func run() -> void:
     await settle()
     bounds(game.panel)
     game.show_menu()
+    var validation_profile: Dictionary = game.profile.data.duplicate(true)
+    check(not game.save_recipe("   ", ["projectile"]) and not game.storage_problem and not game.journey_notice.is_empty(), "blank recipe name shows validation feedback without a storage outage")
+    game.show_menu()
+    check(button_named(game.content, "Play without saving") == null, "blank recipe name does not offer storage fallback on menu")
+    game.profile.data.recipes.clear()
+    for index in game.Profile.MAX_RECIPES:
+        game.profile.data.recipes.append({"name": "Full %d" % index, "components": ["projectile"]})
+    check(not game.journey.import_code(Share.encode_recipe("Overflow", ["projectile"])) and not game.storage_problem, "full recipe library import is validation feedback, not a storage outage")
+    game.show_menu()
+    check(button_named(game.content, "Play without saving") == null, "full recipe library does not offer storage fallback on menu")
+    game.profile.data = validation_profile
     var inventory: Array = game.owned.duplicate()
     check(game.journey.import_code(Share.encode_recipe("Portable", ["projectile", "frost"])) and game.owned == inventory, "recipe import never grants ownership")
     check(not game.journey.import_code("broken") and not game.journey_notice.is_empty(), "invalid import visible")
@@ -168,14 +207,33 @@ func run() -> void:
     game.start_run(78)
     game.encounter_clear()
     var old_path: String = game.profile.path
+    var saved_primary := FileAccess.get_file_as_string(old_path)
+    var saved_backup := FileAccess.get_file_as_string(old_path + ".bak")
     game.profile.path = "res://cannot-write-profile.json"
     game.suspend_run()
     check(game.state == "reward" and not game.journey_notice.is_empty(), "save failure preserves forge and shows feedback")
+    check(game.storage_problem and button_named(game.content, "Continue without saving") != null, "storage fallback is also available before selecting a reward")
+    await settle()
+    bounds(game.panel)
     game.apply_reward()
     check(game.state == "reward", "unselected reward cannot enter next combat")
     game.choose_reward(game.offers[0])
     game.apply_reward()
     check(game.state == "reward" and not game.journey_notice.is_empty(), "failed checkpoint deletion does not enter combat")
+    await settle()
+    bounds(game.panel)
+    var stranded_run := snapshot(game)
+    var old_encounter: int = game.encounter_index
+    var continue_button := button_named(game.content, "Continue without saving")
+    check(continue_button != null, "failed forge storage exposes explicit continue-without-saving action")
+    if continue_button != null:
+        continue_button.pressed.emit()
+        check(game.state == "reward" and not game.profile_enabled and snapshot(game) == stranded_run and game.run_seed == 78, "no-save action retains the current forge run and existing profile data")
+        game.apply_reward()
+        check(game.state == "combat" and game.encounter_index == old_encounter + 1 and game.components == stranded_run[6], "no-save forge action permits advancing the retained draft")
+        game.encounter_clear()
+        check(game.state == "reward" and game.profile.data == stranded_run[8], "later no-save forge leaves old checkpoint and progress untouched")
+        check(FileAccess.get_file_as_string(old_path) == saved_primary and FileAccess.get_file_as_string(old_path + ".bak") == saved_backup, "continuing without saving preserves primary and backup bytes")
     game.show_menu()
     await settle()
     bounds(game.panel)

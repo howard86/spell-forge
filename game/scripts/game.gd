@@ -66,6 +66,7 @@ var profile = Profile.new()
 var report = Report.new()
 var journey = Journey.new()
 var journey_notice := ""
+var preview_scenario := "cluster"
 var practice := false
 var expedition := "forge"
 var challenge := "standard"
@@ -83,7 +84,7 @@ func profile_active() -> bool:
 
 func profile_feedback(success: bool, message_value: String) -> bool:
     journey_notice = message_value if success else profile.notice
-    storage_problem = not success
+    storage_problem = profile.storage_problem
     return success
 
 func saving_available() -> bool:
@@ -172,6 +173,13 @@ func abandon_run() -> void:
     else:
         label_text(journey_notice, 14)
 
+func continue_without_saving() -> void:
+    if state != "reward" or practice or not profile_enabled or not storage_problem:
+        return
+    profile_enabled = false
+    journey_notice = "Saving is off for this session. This run continues; existing saves are preserved."
+    show_reward()
+
 func play_without_saving() -> void:
     if state != "menu":
         return
@@ -226,7 +234,8 @@ func _ready() -> void:
             bindings_path = settings_path + ".bindings.json"
     profile.path = profile_path
     if profile_enabled:
-        storage_problem = not profile.load_profile()
+        profile.load_profile()
+        storage_problem = profile.storage_problem
         journey_notice = profile.notice
     journey.game = self
     load_settings()
@@ -905,6 +914,9 @@ func show_reward() -> void:
     content.add_theme_constant_override("separation", 3)
     label_text("PRACTICE FORGE · no run progress" if practice else "TRIAL %d CLEARED · +15 health" % (encounter_index + 1), 24)
     var catalog: Dictionary = Spell.catalog()
+    var storage_fallback := profile_enabled and storage_problem and not practice
+    var storage_action_label := "Continue without saving" if storage_fallback else "Suspend to menu" if profile_enabled else "Abandon unsaved run"
+    var storage_action: Callable = continue_without_saving if storage_fallback else suspend_run if profile_enabled else show_menu
     if not selected_reward:
         label_text("Choose one component or recover health", 17)
         var cards := HBoxContainer.new()
@@ -927,7 +939,7 @@ func show_reward() -> void:
                 inspect.text = "Inspect " + str(catalog[offer].name)
                 inspect.pressed.connect(func(): journey.inspect_reward(offer))
                 inspect_row.add_child(inspect)
-        button("Suspend to menu" if profile_enabled else "Return to menu (abandon unsaved run)", suspend_run if profile_enabled else show_menu)
+        button(storage_action_label if profile_enabled else "Return to menu (abandon unsaved run)", storage_action)
         if not journey_notice.is_empty():
             label_text(journey_notice, 12)
         return
@@ -986,16 +998,17 @@ func show_reward() -> void:
     test_area.custom_minimum_size = Vector2(740, 76)
     test_area.source = self
     content.add_child(test_area)
+    journey.restore_preview(test_area)
     var actions := HBoxContainer.new()
     content.add_child(actions)
     var test_button := Button.new()
     test_button.text = "Test group ↻"
-    test_button.pressed.connect(func(): test_area.restart("group"))
+    test_button.pressed.connect(func(): journey.restart_preview(test_area, "group"))
     actions.add_child(test_button)
     var wall_button := Button.new()
     wall_button.text = "Wall shot ↻"
     wall_button.tooltip_text = "Fire toward a wall to test Bounce. Targets wait behind you."
-    wall_button.pressed.connect(func(): test_area.restart("wall"))
+    wall_button.pressed.connect(func(): journey.restart_preview(test_area, "wall"))
     actions.add_child(wall_button)
     var enter := Button.new()
     enter.text = "Enter the Warden's chamber →" if encounter_index == 5 else "Enter next trial →"
@@ -1008,7 +1021,7 @@ func show_reward() -> void:
     actions.add_child(enter)
     var extra := HBoxContainer.new()
     content.add_child(extra)
-    for entry in [["Grimoire / save recipe", journey.show_grimoire], ["Experiment guide", journey.show_tutorial], ["Suspend to menu" if profile_enabled else "Abandon unsaved run", suspend_run if profile_enabled else show_menu]]:
+    for entry in [["Grimoire / save recipe", journey.show_grimoire], ["Experiment guide", journey.show_tutorial], [storage_action_label, storage_action]]:
         if practice and entry[0] == "Suspend to menu":
             continue
         var item := Button.new()

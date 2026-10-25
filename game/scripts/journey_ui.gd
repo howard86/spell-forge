@@ -44,6 +44,14 @@ func notice() -> void:
 func back_to_forge() -> void:
     game.show_reward()
 
+func restart_preview(preview: Control, scenario: String) -> void:
+    preview.restart(scenario)
+    game.preview_scenario = preview.scenario
+
+func restore_preview(preview: Control) -> void:
+    restart_preview(preview, game.preview_scenario)
+    preview.picker.item_selected.connect(func(_index: int): game.preview_scenario = preview.scenario)
+
 func add_preview(equipped: Array, candidate: Array) -> void:
     # Detached source owns copied arrays; prospective inspection cannot commit edits.
     var source = game.get_script().new()
@@ -56,6 +64,7 @@ func add_preview(equipped: Array, candidate: Array) -> void:
     preview.custom_minimum_size = Vector2(720, 92)
     preview.tree_exited.connect(func(): source.free(), CONNECT_ONE_SHOT)
     page.add_child(preview)
+    restore_preview(preview)
     text("Same setup, one cast over two seconds. Choose a scenario above; this observation does not predict a run outcome.")
 
 func show_practice() -> void:
