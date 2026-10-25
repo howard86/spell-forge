@@ -58,6 +58,42 @@ func test_checkpoint() -> void:
 	var missing := checkpoint()
 	missing.erase("route")
 	check(not Profile.validate_checkpoint(missing), "Reject missing checkpoint field")
+	var reward_report := Report.new()
+	reward_report.reset(137, "forge")
+	reward_report.event("reward_offered", {"encounter": 1, "offered": ["fire", "frost", "restore"], "owned": ["projectile", "fire"], "equipped": ["projectile"]})
+	var pending := checkpoint()
+	pending.selected_reward = false
+	pending.report = reward_report.snapshot()
+	check(Profile.validate_checkpoint(pending), "Actual current-encounter offer validates before choice")
+	var empty_offers: Dictionary = pending.duplicate(true)
+	empty_offers.offers = []
+	check(not Profile.validate_checkpoint(empty_offers), "Unselected checkpoint requires an available reward")
+	reward_report.event("reward_chosen", {"encounter": 1, "chosen": ["restore"]})
+	var chosen: Dictionary = pending.duplicate(true)
+	chosen.selected_reward = true
+	chosen.report = reward_report.snapshot()
+	check(Profile.validate_checkpoint(chosen), "Actual current-encounter choice validates")
+	var reopened: Dictionary = chosen.duplicate(true)
+	reopened.selected_reward = false
+	check(not Profile.validate_checkpoint(reopened), "Recorded current-encounter choice cannot reopen rewards")
+	reward_report.event("reward_offered", {"encounter": 2, "offered": ["restore"]})
+	var repeated: Dictionary = chosen.duplicate(true)
+	repeated.encounter = 2
+	repeated.offers = ["restore"]
+	repeated.selected_reward = false
+	repeated.report = reward_report.snapshot()
+	check(Profile.validate_checkpoint(repeated), "Prior restore choice does not consume a later encounter reward")
+	reward_report.event("reward_chosen", {"encounter": 2, "chosen": ["restore"]})
+	repeated.selected_reward = true
+	repeated.report = reward_report.snapshot()
+	check(Profile.validate_checkpoint(repeated), "Repeated restore reward remains a valid chosen checkpoint")
+	repeated.selected_reward = false
+	check(not Profile.validate_checkpoint(repeated), "Repeated restore choice cannot reopen rewards despite deduplicated summaries")
+	for index in range(Report.MAX_EVENTS):
+		reward_report.event("sample")
+	repeated.selected_reward = true
+	repeated.report = reward_report.snapshot()
+	check(Profile.validate_checkpoint(repeated), "Chosen checkpoint remains valid when reward events have rolled out")
 	var four := checkpoint()
 	four.challenge = "four_slot"
 	four.owned = ["projectile", "fire", "frost", "pierce", "chain"]
@@ -211,6 +247,31 @@ func test_storage() -> void:
 	var previous := profile.data.duplicate(true)
 	check(not profile.save_recipe("Cannot persist", ["projectile"]) and not profile.notice.is_empty() and profile.data == previous, "Write failure surfaced and mutation rolled back")
 
+func test_storage_problem() -> void:
+	var profile := Profile.new()
+	profile.path = fixture + "/status.json"
+	check(profile.load_profile() and profile.get("storage_problem") == false, "Missing profile starts clean without a storage problem")
+	var invalid := checkpoint()
+	invalid.offers = []
+	invalid.selected_reward = false
+	check(not profile.set_checkpoint(invalid) and profile.get("storage_problem") == false, "Checkpoint validation is not a storage outage")
+	profile.path = "user://../outside.json"
+	check(not profile.save_profile() and profile.get("storage_problem") == true, "Unsafe storage path reports a storage problem")
+	check(not profile.save_recipe("", ["projectile"]) and profile.get("storage_problem") == false, "Latest recipe validation clears an earlier storage status")
+	profile.path = fixture + "/status-blocker/profile.json"
+	write_file(fixture + "/status-blocker", "not a directory")
+	check(not profile.save_recipe("Blocked", ["projectile"]) and profile.get("storage_problem") == true, "Actual directory I/O failure reports a storage problem")
+	profile.path = fixture + "/status.json"
+	check(profile.save_recipe("Works", ["projectile"]) and profile.get("storage_problem") == false, "Successful storage operation clears an earlier I/O status")
+	write_file(profile.path, "{corrupt")
+	check(not profile.load_profile() and profile.get("storage_problem") == true, "Unrecoverable load failure reports a storage problem")
+	write_file(profile.path + ".bak", JSON.stringify(Profile.default_data()))
+	check(profile.load_profile() and profile.get("storage_problem") == false, "Successful unprotected backup recovery is not an outage")
+	write_file(profile.path, '{"schema_version":2}')
+	check(not profile.load_profile() and profile.get("storage_problem") == true, "Protected future storage reports a storage problem")
+	check(not profile.save_profile() and profile.get("storage_problem") == true, "Protected writes retain storage problem classification")
+	check(not profile.delete_recipe("Missing") and profile.get("storage_problem") == false, "Missing recipe validation is not a storage outage")
+
 func cleanup() -> void:
 	var directory := DirAccess.open(fixture)
 	if directory == null:
@@ -225,6 +286,7 @@ func _initialize() -> void:
 	test_checkpoint()
 	test_storage()
 	test_storage_preservation()
+	test_storage_problem()
 	cleanup()
 	print("Profile: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

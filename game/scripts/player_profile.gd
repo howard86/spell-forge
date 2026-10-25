@@ -21,6 +21,8 @@ const CHECKPOINT_FIELDS := ["schema_version", "content_version", "seed", "expedi
 var path: String = "user://profile.json"
 var data: Dictionary = default_data()
 var notice: String = ""
+# Classification of the latest storage/mutation operation, independent of notice text.
+var storage_problem := false
 var _write_blocked := false
 var _write_block_notice := ""
 
@@ -123,6 +125,8 @@ static func validate_checkpoint(value: Variant) -> bool:
 			return false
 	if not _ids(value.offers, 4, true) or not value.selected_reward is bool or not value.selected_component is String:
 		return false
+	if not value.selected_reward and value.offers.is_empty():
+		return false
 	if value.selected_component != "" and not value.owned.has(value.selected_component):
 		return false
 	if not value.route in ["open", "reflector"] or not value.report is Dictionary or not _json_safe(value.report):
@@ -133,6 +137,12 @@ static func validate_checkpoint(value: Variant) -> bool:
 	if not restored.restore(value.report):
 		return false
 	var report: Dictionary = restored.snapshot()
+	# Lifetime chosen IDs are deduplicated and can include earlier "restore" choices.
+	# Only a retained choice for this encounter proves the current reward consumed.
+	if not value.selected_reward:
+		for row in report.events:
+			if row.kind == "reward_chosen" and row.details.get("encounter") == value.encounter and not row.details.get("chosen", []).is_empty():
+				return false
 	return not report.finished and report.seed == value.seed and report.expedition == value.expedition and report.owned == value.owned and report.equipped == value.components
 
 static func _valid_profile(value: Variant) -> bool:
@@ -188,15 +198,18 @@ func _protect_originals(primary: Dictionary, backup: Dictionary) -> bool:
 		reasons.append("Backup: " + str(backup.error))
 	if reasons.is_empty():
 		return false
+	storage_problem = true
 	_write_blocked = true
 	_write_block_notice = "Writes blocked. " + " ".join(reasons)
 	return true
 
 func load_profile() -> bool:
+	storage_problem = false
 	notice = ""
 	_write_blocked = false
 	_write_block_notice = ""
 	if not _safe_path():
+		storage_problem = true
 		notice = "Profile path must be inside user storage."
 		return false
 	var primary := _read_file(path)
@@ -218,12 +231,14 @@ func load_profile() -> bool:
 	if primary.get("missing", false) and backup.get("missing", false):
 		data = default_data()
 		return true
+	storage_problem = true
 	notice = _write_block_notice if _write_blocked else str(primary.get("error", backup.get("error", "Profile could not be recovered.")))
 	return false
 
 func _write_text(filename: String, content: String) -> bool:
 	var file := FileAccess.open(filename, FileAccess.WRITE)
 	if file == null:
+		storage_problem = true
 		notice = "Cannot write profile (%s)." % error_string(FileAccess.get_open_error())
 		return false
 	file.store_string(content)
@@ -231,16 +246,20 @@ func _write_text(filename: String, content: String) -> bool:
 	var error := file.get_error()
 	file.close()
 	if error != OK:
+		storage_problem = true
 		notice = "Cannot finish profile write (%s)." % error_string(error)
 		return false
 	return true
 
 func save_profile() -> bool:
+	storage_problem = false
 	notice = ""
 	if not _safe_path():
+		storage_problem = true
 		notice = "Profile path must be inside user storage."
 		return false
 	if _write_blocked:
+		storage_problem = true
 		notice = _write_block_notice
 		return false
 	if not _valid_profile(data):
@@ -257,6 +276,7 @@ func save_profile() -> bool:
 		return false
 	var directory_error := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 	if directory_error != OK:
+		storage_problem = true
 		notice = "Cannot create profile storage (%s)." % error_string(directory_error)
 		return false
 	if not _write_text(path + ".tmp", serialized):
@@ -267,10 +287,12 @@ func save_profile() -> bool:
 			return false
 		var backup_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(path + ".bak.tmp"), ProjectSettings.globalize_path(path + ".bak"))
 		if backup_error != OK:
+			storage_problem = true
 			notice = "Cannot preserve profile backup (%s)." % error_string(backup_error)
 			return false
 	var commit_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(path + ".tmp"), ProjectSettings.globalize_path(path))
 	if commit_error != OK:
+		storage_problem = true
 		notice = "Cannot replace profile (%s)." % error_string(commit_error)
 		return false
 	return true
@@ -282,6 +304,7 @@ func _persist(previous: Dictionary) -> bool:
 	return false
 
 func save_recipe(name: String, components: Array) -> bool:
+	storage_problem = false
 	var clean := normalize_name(name)
 	if clean.is_empty() or not _build(components):
 		notice = "Choose a name and a valid spell recipe."
@@ -299,6 +322,7 @@ func save_recipe(name: String, components: Array) -> bool:
 	return _persist(previous)
 
 func delete_recipe(name: String) -> bool:
+	storage_problem = false
 	var key := normalize_name(name).to_lower()
 	for index in data.recipes.size():
 		if data.recipes[index].name.to_lower() == key:
@@ -329,6 +353,7 @@ func milestone(id: String) -> void:
 		data.milestones.append(id)
 
 func set_checkpoint(value: Dictionary) -> bool:
+	storage_problem = false
 	if not validate_checkpoint(value):
 		notice = "Only a valid reward-screen checkpoint can be saved."
 		return false
